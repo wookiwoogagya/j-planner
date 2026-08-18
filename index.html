@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>J플래너</title>
+<meta name="theme-color" content="#1b4b7a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="J플래너">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=">
+<link rel="manifest" id="manifestLink">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --navy:#1b4b7a; --navy2:#3f7cb0; --orange:#d9724a; --gold:#e0a94e;
+  --bg:#f6f8fa; --card:#ffffff; --border:#e5e9ee; --ink:#1c2733; --sub:#6b7a89;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  overscroll-behavior-y:none;}
+body{max-width:480px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:calc(64px + var(--safe-bottom));}
+button{font-family:inherit;}
+.btn-press{transition:transform .08s ease;}
+.btn-press:active{transform:scale(.94);}
+img,svg{-webkit-user-drag:none;}
+a{color:inherit;text-decoration:none;}
+
+/* ===== Appbar ===== */
+#appbar{position:sticky;top:0;z-index:40;background:#fff;border-bottom:1px solid var(--border);
+  padding-top:var(--safe-top);}
+#appbarInner{display:flex;align-items:center;gap:8px;padding:10px 14px;}
+#appbarInner .logo{font-weight:800;color:var(--navy);font-size:17px;white-space:nowrap;}
+.iconbtn{border:none;background:#f0f3f6;color:var(--navy);width:34px;height:34px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex:none;}
+#tripSwitch{flex:1;display:flex;align-items:center;gap:4px;justify-content:center;border:none;background:none;
+  font-size:14px;font-weight:700;color:var(--ink);padding:6px 4px;border-radius:8px;overflow:hidden;}
+#tripSwitch span.name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px;}
+
+/* ===== Header ===== */
+#header{position:relative;margin:10px 12px 0;border-radius:18px;overflow:hidden;color:#fff;min-height:170px;
+  background:linear-gradient(135deg,var(--navy),var(--navy2));background-size:cover;background-position:center;}
+#header::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15),rgba(0,0,0,.55));}
+#header .hcontent{position:relative;padding:16px 16px 18px;z-index:2;}
+#header .label{font-size:12px;font-weight:700;opacity:.9;letter-spacing:.3px;}
+#header .title{font-size:23px;font-weight:800;margin:4px 0 6px;line-height:1.25;}
+#header .sub{font-size:12.5px;opacity:.92;}
+#header .dday{display:inline-block;margin-top:10px;background:var(--orange);font-size:12px;font-weight:800;
+  padding:4px 10px;border-radius:999px;}
+#camBtn{position:absolute;top:12px;right:12px;z-index:3;width:34px;height:34px;border-radius:50%;
+  background:rgba(0,0,0,.35);border:none;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;}
+
+/* ===== Page Tabs ===== */
+#pageTabs{display:flex;margin:14px 12px 0;background:#eef1f4;border-radius:12px;padding:3px;gap:3px;}
+#pageTabs button{flex:1;border:none;background:transparent;padding:9px 0;border-radius:10px;font-size:14px;
+  font-weight:700;color:var(--sub);cursor:pointer;}
+#pageTabs button.active{background:#fff;color:var(--navy);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+
+/* ===== Date Tabs ===== */
+#dateTabsWrap{position:sticky;top:calc(var(--safe-top) + 54px);z-index:30;background:var(--bg);
+  padding:10px 0 8px;}
+#dateTabs{display:flex;gap:8px;overflow-x:auto;padding:0 12px;scrollbar-width:none;}
+#dateTabs::-webkit-scrollbar{display:none;}
+.datechip{flex:none;min-width:56px;text-align:center;padding:7px 8px;border-radius:12px;background:#fff;
+  border:1px solid var(--border);cursor:pointer;}
+.datechip .dow{font-size:10.5px;color:var(--sub);font-weight:700;}
+.datechip .md{font-size:14px;font-weight:800;margin:2px 0;}
+.datechip .city{font-size:9.5px;color:var(--navy2);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56px;}
+.datechip.active{background:var(--navy);border-color:var(--navy);}
+.datechip.active .dow,.datechip.active .md{color:#fff;}
+.datechip.active .city{color:#cfe0ee;}
+
+/* ===== Content ===== */
+#content{padding:4px 12px 90px;}
+.page{display:none;}
+.page.active{display:block;}
+
+.section-title{font-size:14px;font-weight:800;color:var(--ink);margin:16px 2px 8px;}
+
+/* flight card */
+.flightcard{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:10px;
+  box-shadow:0 1px 4px rgba(20,40,60,.04);}
+.flightrow{display:flex;align-items:center;justify-content:space-between;}
+.flightcol{text-align:center;flex:1;}
+.flightcol .code{font-size:20px;font-weight:800;color:var(--navy);}
+.flightcol .city{font-size:11.5px;color:var(--sub);margin-top:2px;}
+.flightcol .time{font-size:13px;font-weight:700;margin-top:6px;}
+.flightmid{flex:none;width:60px;text-align:center;color:var(--navy2);font-size:20px;position:relative;}
+.flightmid .line{height:1px;background:var(--border);width:100%;position:absolute;top:50%;left:0;}
+.flightmeta{margin-top:10px;font-size:11.5px;color:var(--sub);text-align:center;}
+.addflightbtn{width:100%;border:1.5px dashed var(--navy2);background:#fff;color:var(--navy2);font-weight:700;
+  border-radius:14px;padding:12px;font-size:13.5px;cursor:pointer;margin-bottom:14px;}
+
+/* docs box */
+#docsBox{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px 14px;margin-bottom:14px;display:none;}
+#docsBox.show{display:block;}
+#docsBox .dtitle{font-size:13px;font-weight:800;margin-bottom:8px;}
+.docrow{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);cursor:pointer;}
+.docrow:last-child{border-bottom:none;}
+.docrow .di{width:32px;height:32px;border-radius:8px;background:#eef1f4;display:flex;align-items:center;justify-content:center;font-size:15px;flex:none;}
+.docrow .dtext{flex:1;overflow:hidden;}
+.docrow .dname{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.docrow .dsub{font-size:11px;color:var(--sub);}
+
+/* item card */
+.itemcard{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:10px;
+  box-shadow:0 1px 4px rgba(20,40,60,.04);scroll-margin-top:120px;}
+.itemcard.flash{animation:flash 1.4s ease;}
+@keyframes flash{0%{box-shadow:0 0 0 3px var(--gold);}100%{box-shadow:0 1px 4px rgba(20,40,60,.04);}}
+.itophead{display:flex;gap:10px;align-items:flex-start;}
+.icon-badge{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none;}
+.itop{flex:1;min-width:0;}
+.itop .row1{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.itop .time{font-weight:800;color:var(--navy);font-size:13.5px;}
+.itop .name{font-weight:800;font-size:15px;}
+.alarmbadge{font-size:10.5px;background:#fdf0e8;color:var(--orange);font-weight:700;padding:2px 6px;border-radius:8px;}
+.row2{margin-top:3px;font-size:11.5px;color:var(--sub);display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.tagpill{background:#eef1f4;padding:2px 7px;border-radius:8px;font-weight:600;}
+.memo{margin-top:8px;font-size:12.5px;color:var(--ink);background:#f7f9fb;padding:8px 10px;border-radius:10px;line-height:1.5;}
+.actrow{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.actbtn{border:1px solid var(--border);background:#fff;color:var(--ink);font-size:11.5px;font-weight:700;
+  padding:6px 9px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:4px;}
+.actbtn.danger{color:#c0392b;border-color:#f0d3cf;}
+.empty-day{text-align:center;color:var(--sub);font-size:13px;padding:30px 0;}
+
+/* bottom bar */
+#bottombar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
+  background:#fff;border-top:1px solid var(--border);display:flex;gap:8px;padding:10px 12px calc(10px + var(--safe-bottom));
+  z-index:35;}
+#bottombar button{flex:1;border:none;border-radius:12px;padding:12px;font-weight:800;font-size:13.5px;cursor:pointer;}
+#bottombar .primary{background:var(--navy);color:#fff;}
+#bottombar .secondary{background:#eef1f4;color:var(--ink);flex:none;width:52px;}
+
+/* ===== Overview page ===== */
+#mapWrap{border-radius:16px;overflow:hidden;border:1px solid var(--border);position:relative;height:52vh;min-height:320px;}
+#map{width:100%;height:100%;}
+.pinnum{background:var(--navy);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-weight:800;font-size:12px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);}
+.pinnum.done{background:var(--navy2);}
+.pinlabel{background:#fff;border-radius:8px;padding:2px 7px;font-size:10.5px;font-weight:700;color:var(--ink);
+  box-shadow:0 1px 4px rgba(0,0,0,.25);white-space:nowrap;border:1px solid var(--border);}
+.charwrap{transform-origin:center;}
+#overviewBottom{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;margin-top:10px;}
+#ovProgress{font-size:11.5px;color:var(--sub);font-weight:700;margin-bottom:6px;}
+#ovBar{height:5px;background:#eef1f4;border-radius:99px;overflow:hidden;margin-bottom:10px;}
+#ovBarFill{height:100%;background:var(--orange);width:0%;transition:width .3s;}
+#ovNow{font-size:14px;font-weight:800;}
+#ovNowSub{font-size:12px;color:var(--sub);margin-top:2px;}
+#ovBtns{display:flex;gap:8px;margin-top:12px;}
+#ovBtns button{flex:1;border:1px solid var(--border);background:#fff;border-radius:12px;padding:10px;font-weight:800;
+  font-size:13px;cursor:pointer;color:var(--ink);}
+#ovBtns button.mid{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+/* ===== Sheets / Modal ===== */
+.overlay{position:fixed;inset:0;background:rgba(15,25,35,.45);z-index:60;opacity:0;pointer-events:none;
+  transition:opacity .2s;}
+.overlay.show{opacity:1;pointer-events:auto;}
+.sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,100%);width:100%;max-width:480px;
+  background:#fff;border-radius:20px 20px 0 0;z-index:61;max-height:88vh;overflow-y:auto;
+  transition:transform .28s cubic-bezier(.2,.8,.2,1);padding-bottom:calc(20px + var(--safe-bottom));}
+.sheet.show{transform:translate(-50%,0);}
+.sheet-handle{width:38px;height:4px;background:#e0e4e8;border-radius:99px;margin:10px auto 4px;}
+.sheet-head{padding:6px 18px 10px;display:flex;align-items:center;justify-content:space-between;}
+.sheet-head h3{margin:0;font-size:16px;}
+.sheet-close{border:none;background:#f0f3f6;width:28px;height:28px;border-radius:50%;font-size:14px;cursor:pointer;color:var(--sub);}
+.sheet-body{padding:4px 18px 18px;}
+
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--sub);margin-bottom:6px;}
+.field input[type=text],.field input[type=date],.field input[type=time],.field textarea,.field select{
+  width:100%;border:1px solid var(--border);border-radius:12px;padding:11px 12px;font-size:14px;background:#fbfcfd;color:var(--ink);font-family:inherit;}
+.field textarea{resize:vertical;min-height:60px;}
+.chiprow{display:flex;gap:7px;flex-wrap:wrap;}
+.chip{border:1px solid var(--border);background:#fff;border-radius:10px;padding:8px 11px;font-size:12.5px;font-weight:700;
+  cursor:pointer;color:var(--ink);}
+.chip.sel{background:var(--navy);border-color:var(--navy);color:#fff;}
+.two-col{display:flex;gap:10px;}
+.two-col .field{flex:1;}
+.filepick{border:1.5px dashed var(--border);border-radius:12px;padding:12px;text-align:center;color:var(--sub);
+  font-size:12.5px;cursor:pointer;background:#fbfcfd;}
+.filelist{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+.filechip{background:#eef1f4;font-size:11px;padding:5px 9px;border-radius:9px;display:flex;align-items:center;gap:6px;}
+.filechip .x{cursor:pointer;color:#c0392b;font-weight:800;}
+.sheet-actions{display:flex;gap:8px;margin-top:6px;}
+.sheet-actions button{flex:1;border:none;border-radius:13px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;}
+.act-save{background:var(--navy);color:#fff;}
+.act-delete{background:#fdecea;color:#c0392b;}
+.act-cancel{background:#eef1f4;color:var(--ink);}
+
+/* trip list rows */
+.triprow{display:flex;align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid var(--border);}
+.triprow:last-child{border-bottom:none;}
+.triprow .tinfo{flex:1;cursor:pointer;}
+.triprow .tinfo .ttitle{font-weight:800;font-size:14.5px;display:flex;align-items:center;gap:6px;}
+.triprow .tinfo .tmeta{font-size:11.5px;color:var(--sub);margin-top:3px;}
+.checkmark{color:var(--navy);font-weight:900;}
+.tripbtns{display:flex;gap:5px;}
+.smallbtn{border:1px solid var(--border);background:#fff;width:30px;height:30px;border-radius:9px;font-size:13px;cursor:pointer;}
+.smallbtn.del{color:#c0392b;}
+.smallbtn.del.confirm{background:#c0392b;color:#fff;border-color:#c0392b;}
+.newtripbtn{width:100%;border:1.5px dashed var(--navy2);background:#fff;color:var(--navy2);font-weight:700;
+  border-radius:14px;padding:12px;font-size:13.5px;cursor:pointer;margin-top:12px;}
+
+/* usage sheet */
+.usecard{background:#f7f9fb;border-radius:14px;padding:12px 14px;margin-bottom:10px;}
+.usecard b{display:block;font-size:13.5px;margin-bottom:3px;}
+.usecard span{font-size:12.5px;color:var(--sub);line-height:1.5;}
+.stepline{display:flex;gap:10px;margin-bottom:12px;}
+.stepnum{width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;font-size:11px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;flex:none;}
+.stepline .stext{font-size:13px;line-height:1.5;padding-top:1px;}
+
+/* settings */
+.setrow{display:flex;align-items:center;justify-content:between;justify-content:space-between;padding:12px 4px;
+  border-bottom:1px solid var(--border);}
+.setrow:last-child{border-bottom:none;}
+.setrow .slabel{font-size:13.5px;font-weight:700;}
+.setrow .sdesc{font-size:11.5px;color:var(--sub);margin-top:2px;}
+.setbtn{border:1px solid var(--border);background:#fff;border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:700;cursor:pointer;}
+.setbtn.danger{color:#c0392b;border-color:#f0d3cf;}
+.setbtn.danger.confirm{background:#c0392b;color:#fff;}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:calc(80px + var(--safe-bottom));transform:translate(-50%,20px);
+  background:rgba(28,39,51,.94);color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:600;
+  z-index:90;opacity:0;pointer-events:none;transition:all .25s;max-width:88%;text-align:center;}
+#toast.show{opacity:1;transform:translate(-50%,0);}
+
+/* alarm popup */
+#alarmPop{position:fixed;top:calc(var(--safe-top) + 8px);left:50%;transform:translate(-50%,-140%);
+  background:var(--orange);color:#fff;padding:12px 16px;border-radius:14px;z-index:95;box-shadow:0 6px 18px rgba(0,0,0,.25);
+  transition:transform .3s;width:88%;max-width:420px;}
+#alarmPop.show{transform:translate(-50%,0);}
+#alarmPop b{display:block;font-size:14px;}
+#alarmPop span{font-size:12px;opacity:.92;}
+
+#hiddenInputs{display:none;}
+.leaflet-div-icon{background:transparent;border:none;}
+</style>
+</head>
+<body>
+
+<div id="appbar">
+  <div id="appbarInner">
+    <div class="logo">J플래너</div>
+    <button class="iconbtn btn-press" id="usageBtn" title="사용법">?</button>
+    <button id="tripSwitch" class="btn-press"><span class="name">여행</span><span>▾</span></button>
+    <button class="iconbtn btn-press" id="newTripBtn" title="새 여행">＋</button>
+  </div>
+</div>
+
+<div id="header">
+  <div class="hcontent">
+    <div class="label" id="hLabel">여행 · 2026</div>
+    <div class="title" id="hTitle">제목 없음</div>
+    <div class="sub" id="hSub">날짜 미정</div>
+    <div class="dday" id="hDday">D-0</div>
+  </div>
+  <button id="camBtn" class="btn-press">📷</button>
+</div>
+
+<div id="pageTabs">
+  <button data-page="schedule" class="active">일정</button>
+  <button data-page="overview">오버뷰</button>
+</div>
+
+<div id="dateTabsWrap">
+  <div id="dateTabs"></div>
+</div>
+
+<div id="content">
+
+  <div class="page active" id="page-schedule">
+    <div class="section-title">항공편</div>
+    <div id="flightList"></div>
+    <button class="addflightbtn btn-press" id="addFlightBtn">＋ 항공편 추가</button>
+
+    <div id="docsBox">
+      <div class="dtitle">📎 예약 서류함</div>
+      <div id="docsList"></div>
+    </div>
+
+    <div class="section-title" id="itemsTitle">일정</div>
+    <div id="itemList"></div>
+  </div>
+
+  <div class="page" id="page-overview">
+    <div id="mapWrap"><div id="map"></div></div>
+    <div id="overviewBottom">
+      <div id="ovProgress">오늘의 여정 0/0</div>
+      <div id="ovBar"><div id="ovBarFill"></div></div>
+      <div id="ovNow">일정이 없습니다</div>
+      <div id="ovNowSub"></div>
+      <div id="ovBtns">
+        <button class="btn-press" id="ovPrev">◀ 이전</button>
+        <button class="mid btn-press" id="ovNow2">지금</button>
+        <button class="btn-press" id="ovNext">다음 ▶</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="bottombar">
+  <button class="secondary btn-press" id="settingsBtn">⚙️</button>
+  <button class="primary btn-press" id="addItemBtn">＋ 일정 추가</button>
+</div>
+
+<div id="toast"></div>
+<div id="alarmPop"><b id="alarmTitle">⏰ 알람</b><span id="alarmSub"></span></div>
+
+<div class="overlay" id="overlay"></div>
+
+<!-- 여행 목록 시트 -->
+<div class="sheet" id="sheetTrips">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><h3>내 여행 목록</h3><button class="sheet-close" data-close>✕</button></div>
+  <div class="sheet-body">
+    <div id="tripListWrap"></div>
+    <button class="newtripbtn btn-press" id="newTripBtn2">＋ 새 여행 만들기</button>
+  </div>
+</div>
+
+<!-- 여행 편집 시트 -->
+<div class="sheet" id="sheetTripEdit">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><h3 id="tripEditTitle">새 여행</h3><button class="sheet-close" data-close>✕</button></div>
+  <div class="sheet-body">
+    <div class="field"><label>제목</label><input type="text" id="tf_title" placeholder="예: 도쿄 여행"></div>
+    <div class="two-col">
+      <div class="field"><label>시작일</label><input type="date" id="tf_start"></div>
+      <div class="field"><label>종료일</label><input type="date" id="tf_end"></div>
+    </div>
+    <div class="field"><label>부제 (예: 2인)</label><input type="text" id="tf_note" placeholder="2인"></div>
+    <div class="field"><label>도시 (쉼표로 구분, 날짜순)</label><input type="text" id="tf_cities" placeholder="도쿄, 하코네"></div>
+    <div class="sheet-actions">
+      <button class="act-delete" id="tf_delete" style="display:none">삭제</button>
+      <button class="act-cancel" data-close>취소</button>
+      <button class="act-save" id="tf_save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 항공편 시트 -->
+<div class="sheet" id="sheetFlight">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><h3 id="flightEditTitle">항공편</h3><button class="sheet-close" data-close>✕</button></div>
+  <div class="sheet-body">
+    <div class="two-col">
+      <div class="field"><label>출발 공항코드</label><input type="text" id="ff_fromCode" placeholder="ICN" maxlength="4"></div>
+      <div class="field"><label>도착 공항코드</label><input type="text" id="ff_toCode" placeholder="NRT" maxlength="4"></div>
+    </div>
+    <div class="two-col">
+      <div class="field"><label>출발 도시</label><input type="text" id="ff_fromCity" placeholder="서울"></div>
+      <div class="field"><label>도착 도시</label><input type="text" id="ff_toCity" placeholder="도쿄"></div>
+    </div>
+    <div class="two-col">
+      <div class="field"><label>출발 날짜/시간</label><input type="date" id="ff_fromDate"><input type="time" id="ff_fromTime" style="margin-top:8px"></div>
+      <div class="field"><label>도착 날짜/시간</label><input type="date" id="ff_toDate"><input type="time" id="ff_toTime" style="margin-top:8px"></div>
+    </div>
+    <div class="field"><label>편명/메모</label><input type="text" id="ff_meta" placeholder="OZ102"></div>
+    <div class="sheet-actions">
+      <button class="act-delete" id="ff_delete" style="display:none">삭제</button>
+      <button class="act-cancel" data-close>취소</button>
+      <button class="act-save" id="ff_save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 일정 시트 -->
+<div class="sheet" id="sheetItem">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><h3 id="itemEditTitle">일정 추가</h3><button class="sheet-close" data-close>✕</button></div>
+  <div class="sheet-body">
+    <div class="field"><label>카테고리</label><div class="chiprow" id="if_catChips"></div></div>
+    <div class="two-col">
+      <div class="field"><label>날짜</label><input type="date" id="if_day"></div>
+      <div class="field"><label>시간</label><input type="time" id="if_time"></div>
+    </div>
+    <div class="field"><label>일정 이름</label><input type="text" id="if_name" placeholder="예: 센소지"></div>
+    <div class="field"><label>지도 검색어 / 주소</label><input type="text" id="if_place" placeholder="예: 센소지, 도쿄"></div>
+    <div class="field"><label>구글맵 링크 (선택)</label><input type="text" id="if_mapUrl" placeholder="https://maps.google.com/..."></div>
+    <div class="field"><label>이동 방법</label><div class="chiprow" id="if_moveChips"></div></div>
+    <div class="field"><label>알람 시간 (선택)</label><input type="time" id="if_alarm"></div>
+    <div class="field"><label>메모</label><textarea id="if_memo" placeholder="메모를 입력하세요"></textarea></div>
+    <div class="field">
+      <label>첨부파일 (PDF·이미지)</label>
+      <div class="filepick" id="if_filepick">탭하여 파일 선택</div>
+      <div class="filelist" id="if_fileList"></div>
+    </div>
+    <div class="sheet-actions">
+      <button class="act-delete" id="if_delete" style="display:none">삭제</button>
+      <button class="act-cancel" data-close>취소</button>
+      <button class="act-save" id="if_save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 설정 시트 -->
+<div class="sheet" id="sheetSettings">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><h3>설정</h3><button class="sheet-close" data-close>✕</button></div>
+  <div class="sheet-body">
+    <div class="field"><label>여행 제목</label><input type="text" id="st_title"></div>
+    <div class="setrow"><div><div class="slabel">배경 사진</div><div class="sdesc">헤더 배경을 변경합니다</div></div>
+      <button class="setbtn" id="st_bg">변경</button></div>
+    <div class="setrow"><div><div class="slabel">알림 권한</div><div class="sdesc">브라우저 알림을 허용합니다</div></div>
+      <button class="setbtn" id="st_notif">요청</button></div>
+    <div class="setrow"><div><div class="slabel">JSON 내보내기</div><div class="sdesc">전체 데이터를 파일로 저장</div></div>
+      <button class="setbtn" id="st_export">내보내기</button></div>
+    <div class="setrow"><div><div class="slabel">JSON 불러오기</div><div class="sdesc">백업 파일을 복원합니다</div></div>
+      <button class="setbtn" id="st_import">불러오기</button></div>
+    <div class="setrow"><div><div class="slabel">전체 일정 캘린더</div><div class="sdesc">.ics 파일로 내보내기</div></div>
+      <button class="setbtn" id="st_ics">내보내기</button></div>
+    <div class="setrow"><div><div class="slabel">전체 초기화</div><div class="sdesc">모든 여행과 일정을 삭제합니다</div></div>
+      <button class="setbtn danger" id="st_reset">초기화</button></div>
+    <div class="sheet-actions"><button class="act-save" id="st_save" style="width:100%">저장</button></div>
+  </div>
+</div>
+
+<!-- 사용법 시트 -->
+<div class="sheet" id="sheetUsage">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><h3>사용법</h3><button class="sheet-close" data-close>✕</button></div>
+  <div class="sheet-body">
+    <div class="usecard"><b>✈️ J플래너란?</b><span>여러 여행 일정을 한 곳에서 관리하고, 지도 위에서 하루 동선을 확인할 수 있는 여행 플래너입니다. 모든 데이터는 이 기기의 브라우저에만 저장돼요.</span></div>
+    <div class="usecard"><b>🗺️ 오버뷰</b><span>탭한 날짜의 일정을 지도 위 번호 핀으로 보여주고, 캐릭터가 실제 도로를 따라 이동하는 모습을 볼 수 있어요.</span></div>
+    <div class="usecard"><b>⏰ 알람</b><span>일정마다 알람 시각을 설정하면 앱이 열려있는 동안 알려드려요.</span></div>
+    <div class="usecard"><b>📎 서류함</b><span>일정에 첨부한 항공권·예약서류를 한곳에 모아볼 수 있어요.</span></div>
+    <div class="section-title" style="margin-top:18px">사용 단계</div>
+    <div class="stepline"><div class="stepnum">1</div><div class="stext">우측 상단 ＋ 버튼으로 새 여행을 만드세요.</div></div>
+    <div class="stepline"><div class="stepnum">2</div><div class="stext">하단 [＋ 일정 추가]로 날짜별 일정을 등록하세요.</div></div>
+    <div class="stepline"><div class="stepnum">3</div><div class="stext">[오버뷰] 탭에서 하루 동선을 지도로 확인하세요.</div></div>
+    <div class="stepline"><div class="stepnum">4</div><div class="stext">[설정]에서 배경 사진, 알림, 백업을 관리하세요.</div></div>
+  </div>
+</div>
+
+<div id="hiddenInputs">
+  <input type="file" id="fileHeaderBg" accept="image/*">
+  <input type="file" id="fileItemAttach" accept="image/*,application/pdf" multiple>
+  <input type="file" id="fileImport" accept="application/json">
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ Storage ============ */
+const STORE_KEY = "jplanner_data_v1";
+function safeGet(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){ console.warn("load fail", e); }
+  return null;
+}
+function safeSet(data){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+  catch(e){ console.warn("save fail", e); toast("저장 공간이 부족해요"); }
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+
+/* ============ Categories ============ */
+const CATS = {
+  "항공": {emoji:"✈️", color:"#dbe9f6", fg:"#1b4b7a"},
+  "숙소": {emoji:"🏨", color:"#e7e0f5", fg:"#5b3fa0"},
+  "식당": {emoji:"🍽️", color:"#fdeadb", fg:"#c76a1f"},
+  "카페": {emoji:"☕", color:"#f0e4d6", fg:"#8a5a2b"},
+  "명소": {emoji:"🗺️", color:"#e0f2e8", fg:"#1f8a53"},
+  "이동": {emoji:"🚌", color:"#e8eef2", fg:"#3f7cb0"},
+  "쇼핑": {emoji:"🛍️", color:"#fbe4ea", fg:"#c23e63"},
+  "기타": {emoji:"📌", color:"#eef1f4", fg:"#6b7a89"}
+};
+const MOVES = ["도보","지하철","버스","트램","기차","택시","항공","자전거"];
+
+/* ============ Seed ============ */
+function seedData(){
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate()+14);
+  const d0 = fmtDate(start), d1 = fmtDate(addDays(start,1)), d2 = fmtDate(addDays(start,2));
+  const tripId = uid();
+  return {
+    trips: [{
+      id: tripId,
+      title: "도쿄 여행",
+      start: d0, end: d2,
+      note: "2인",
+      cities: ["도쿄"],
+      flights: [{
+        id: uid(), fromCode:"ICN", toCode:"NRT", fromCity:"서울", toCity:"도쿄",
+        fromDate:d0, fromTime:"09:20", toDate:d0, toTime:"11:50", meta:"OZ102"
+      }],
+      items: [
+        {id:uid(), day:d0, time:"13:00", cat:"숙소", name:"신주쿠 호텔 체크인", place:"신주쿠 그랜드 호텔, 도쿄",
+          mapUrl:"", memo:"체크인 15시부터 가능, 짐만 먼저 맡기기", move:"도보", alarm:"", lat:35.6938, lng:139.7034, userDocs:[]},
+        {id:uid(), day:d0, time:"18:00", cat:"식당", name:"이치란 라멘 신주쿠점", place:"이치란 신주쿠점, 도쿄",
+          mapUrl:"", memo:"돈코츠 라멘 맛집, 웨이팅 있을 수 있음", move:"도보", alarm:"", lat:35.6905, lng:139.7005, userDocs:[]},
+        {id:uid(), day:d1, time:"09:30", cat:"명소", name:"센소지", place:"센소지, 도쿄",
+          mapUrl:"", memo:"나카미세도리에서 기념품 구경", move:"지하철", alarm:"08:30", lat:35.7148, lng:139.7967, userDocs:[]},
+        {id:uid(), day:d1, time:"14:00", cat:"카페", name:"시부야 스카이 카페", place:"시부야 스카이, 도쿄",
+          mapUrl:"", memo:"전망대에서 도쿄 전경 감상", move:"지하철", alarm:"", lat:35.6595, lng:139.7005, userDocs:[]},
+        {id:uid(), day:d2, time:"11:00", cat:"쇼핑", name:"긴자 쇼핑", place:"긴자, 도쿄",
+          mapUrl:"", memo:"기념품 및 면세 쇼핑", move:"지하철", alarm:"", lat:35.6717, lng:139.7650, userDocs:[]}
+      ],
+      bg: ""
+    }],
+    activeId: tripId
+  };
+}
+
+let DB = safeGet() || seedData();
+if(!DB.trips || !DB.trips.length){ DB = seedData(); }
+function persist(){ safeSet(DB); }
+persist();
+
+function curTrip(){
+  let t = DB.trips.find(x=>x.id===DB.activeId);
+  if(!t){ t = DB.trips[0]; DB.activeId = t.id; }
+  return t;
+}
+
+/* ============ Date helpers ============ */
+function fmtDate(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+function parseDate(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function dowKR(d){ return ["일","월","화","수","목","금","토"][d.getDay()]; }
+function daysBetween(a,b){ return Math.round((parseDate(b)-parseDate(a))/86400000); }
+function todayStr(){ return fmtDate(new Date()); }
+
+let selectedDay = null;
+
+/* ============ Toast ============ */
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove("show"), 2200);
+}
+
+/* ============ Overlay / Sheets ============ */
+const overlay = document.getElementById("overlay");
+let openSheetEl = null;
+let lockedScrollY = 0;
+function lockBodyScroll(){
+  lockedScrollY = window.scrollY || window.pageYOffset || 0;
+  document.body.style.position = "fixed";
+  document.body.style.top = (-lockedScrollY) + "px";
+  document.body.style.left = "0";
+  document.body.style.right = "0";
+  document.body.style.width = "100%";
+}
+function unlockBodyScroll(){
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.left = "";
+  document.body.style.right = "";
+  document.body.style.width = "";
+  window.scrollTo(0, lockedScrollY);
+}
+function openSheet(id){
+  closeSheet();
+  const el = document.getElementById(id);
+  overlay.classList.add("show");
+  el.classList.add("show");
+  openSheetEl = el;
+  lockBodyScroll();
+}
+function closeSheet(){
+  if(openSheetEl) openSheetEl.classList.remove("show");
+  overlay.classList.remove("show");
+  if(openSheetEl) unlockBodyScroll();
+  openSheetEl = null;
+}
+overlay.addEventListener("click", closeSheet);
+overlay.addEventListener("touchmove", (e)=>e.preventDefault(), {passive:false});
+document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click", closeSheet));
+
+/* ============ Render: Header ============ */
+function renderHeader(){
+  const t = curTrip();
+  const header = document.getElementById("header");
+  header.style.backgroundImage = t.bg ? `url(${t.bg})` : "";
+  const yr = t.start ? parseDate(t.start).getFullYear() : new Date().getFullYear();
+  const cityLabel = t.cities && t.cities.length ? `${t.cities.join(" · ")} · ${yr}` : `${yr}`;
+  document.getElementById("hLabel").textContent = cityLabel;
+  document.getElementById("hTitle").textContent = t.title || "제목 없음";
+
+  if(t.start && t.end){
+    const s = parseDate(t.start), e = parseDate(t.end);
+    const nights = daysBetween(t.start, t.end);
+    const subParts = [`${s.getMonth()+1}월 ${s.getDate()}일 (${dowKR(s)}) – ${e.getMonth()+1}월 ${e.getDate()}일 (${dowKR(e)})`,
+      `${nights}박 ${nights+1}일`];
+    if(t.note) subParts.push(t.note);
+    document.getElementById("hSub").textContent = subParts.join(" · ");
+
+    const today = todayStr();
+    const dEl = document.getElementById("hDday");
+    if(today < t.start){
+      dEl.textContent = `D-${daysBetween(today, t.start)}`;
+    } else if(today === t.start){
+      dEl.textContent = "D-DAY";
+    } else if(today <= t.end){
+      dEl.textContent = `여행 ${daysBetween(t.start, today)+1}일차`;
+    } else {
+      dEl.textContent = "여행 종료";
+    }
+  } else {
+    document.getElementById("hSub").textContent = "날짜를 설정해주세요";
+    document.getElementById("hDday").textContent = "-";
+  }
+  document.getElementById("tripSwitch").querySelector(".name").textContent = t.title || "여행";
+}
+
+/* ============ Render: Date Tabs ============ */
+function tripDates(t){
+  if(!t.start || !t.end) return [];
+  const list = [];
+  let cur = parseDate(t.start);
+  const end = parseDate(t.end);
+  while(cur <= end){ list.push(fmtDate(cur)); cur = addDays(cur,1); }
+  return list;
+}
+function cityForDayIndex(t, idx, total){
+  if(!t.cities || !t.cities.length) return "";
+  const per = Math.ceil(total / t.cities.length);
+  const ci = Math.min(t.cities.length-1, Math.floor(idx/per));
+  return t.cities[ci];
+}
+function renderDateTabs(){
+  const t = curTrip();
+  const dates = tripDates(t);
+  const wrap = document.getElementById("dateTabs");
+  wrap.innerHTML = "";
+  if(!selectedDay || !dates.includes(selectedDay)){
+    selectedDay = dates.includes(todayStr()) ? todayStr() : (dates[0] || null);
+  }
+  dates.forEach((d, idx)=>{
+    const dt = parseDate(d);
+    const chip = document.createElement("div");
+    chip.className = "datechip" + (d===selectedDay ? " active" : "");
+    chip.innerHTML = `<div class="dow">${dowKR(dt)}</div><div class="md">${dt.getMonth()+1}/${dt.getDate()}</div><div class="city">${cityForDayIndex(t,idx,dates.length)}</div>`;
+    chip.addEventListener("click", ()=>{ selectedDay = d; renderDateTabs(); scrollToDay(d); renderOverview(); });
+    wrap.appendChild(chip);
+  });
+}
+function scrollToDay(day){
+  const first = document.querySelector(`.itemcard[data-day="${day}"]`);
+  if(first) first.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+/* ============ Render: Flights ============ */
+function renderFlights(){
+  const t = curTrip();
+  const wrap = document.getElementById("flightList");
+  wrap.innerHTML = "";
+  (t.flights||[]).forEach(f=>{
+    const card = document.createElement("div");
+    card.className = "flightcard";
+    card.innerHTML = `
+      <div class="flightrow">
+        <div class="flightcol"><div class="code">${esc(f.fromCode||"---")}</div><div class="city">${esc(f.fromCity||"")}</div><div class="time">${esc(f.fromTime||"")}</div></div>
+        <div class="flightmid"><div class="line"></div>✈️</div>
+        <div class="flightcol"><div class="code">${esc(f.toCode||"---")}</div><div class="city">${esc(f.toCity||"")}</div><div class="time">${esc(f.toTime||"")}</div></div>
+      </div>
+      <div class="flightmeta">${esc(f.fromDate||"")} ${f.meta? " · "+esc(f.meta):""}</div>`;
+    card.addEventListener("click", ()=>openFlightSheet(f.id));
+    wrap.appendChild(card);
+  });
+}
+
+/* ============ Render: Docs ============ */
+function allDocs(t){
+  const docs = [];
+  (t.items||[]).forEach(it=>{
+    (it.userDocs||[]).forEach(d=>docs.push({name:d.name, data:d.data, day:it.day, itemName:it.name}));
+  });
+  return docs.sort((a,b)=> (a.day||"").localeCompare(b.day||""));
+}
+function renderDocs(){
+  const t = curTrip();
+  const docs = allDocs(t);
+  const box = document.getElementById("docsBox");
+  const list = document.getElementById("docsList");
+  list.innerHTML = "";
+  if(!docs.length){ box.classList.remove("show"); return; }
+  box.classList.add("show");
+  docs.forEach(d=>{
+    const row = document.createElement("div");
+    row.className = "docrow";
+    const isImg = /\.(png|jpe?g|gif|webp)$/i.test(d.name) || (d.data||"").startsWith("data:image");
+    row.innerHTML = `<div class="di">${isImg?"🖼️":"📄"}</div><div class="dtext"><div class="dname">${esc(d.name)}</div><div class="dsub">${dispDate(d.day)} · ${esc(d.itemName)}</div></div>`;
+    row.addEventListener("click", ()=>openDataUrl(d.data, d.name));
+    list.appendChild(row);
+  });
+}
+function dispDate(d){ if(!d) return ""; const dt=parseDate(d); return `${dt.getMonth()+1}/${dt.getDate()}(${dowKR(dt)})`; }
+function openDataUrl(dataUrl, name){
+  try{
+    const arr = dataUrl.split(",");
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8 = new Uint8Array(n);
+    while(n--) u8[n] = bstr.charCodeAt(n);
+    const blob = new Blob([u8], {type:mime});
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  }catch(e){ toast("파일을 열 수 없어요"); }
+}
+
+/* ============ Render: Items ============ */
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function dayItems(t, day){
+  return (t.items||[]).filter(i=>i.day===day).sort((a,b)=> (a.time||"").localeCompare(b.time||""));
+}
+function mapQuery(it){ return it.mapUrl ? null : encodeURIComponent(it.place || it.name || ""); }
+function dirUrl(it){
+  if(it.mapUrl) return it.mapUrl;
+  return `https://www.google.com/maps/dir/?api=1&destination=${mapQuery(it)}`;
+}
+function searchUrl(it){
+  if(it.mapUrl) return it.mapUrl;
+  return `https://www.google.com/maps/search/?api=1&query=${mapQuery(it)}`;
+}
+function renderItems(){
+  const t = curTrip();
+  const wrap = document.getElementById("itemList");
+  wrap.innerHTML = "";
+  const dates = tripDates(t);
+  const titleEl = document.getElementById("itemsTitle");
+  titleEl.textContent = "일정";
+
+  dates.forEach(day=>{
+    const items = dayItems(t, day);
+    const dayHead = document.createElement("div");
+    const dt = parseDate(day);
+    dayHead.className = "section-title";
+    dayHead.style.marginTop = "18px";
+    dayHead.textContent = `${dt.getMonth()+1}월 ${dt.getDate()}일 (${dowKR(dt)})`;
+    dayHead.dataset.day = day;
+    wrap.appendChild(dayHead);
+
+    if(!items.length){
+      const e = document.createElement("div");
+      e.className = "empty-day";
+      e.dataset.day = day;
+      e.textContent = "아직 일정이 없어요";
+      wrap.appendChild(e);
+      return;
+    }
+    items.forEach(it=>{
+      const cat = CATS[it.cat] || CATS["기타"];
+      const card = document.createElement("div");
+      card.className = "itemcard";
+      card.dataset.day = day;
+      card.dataset.id = it.id;
+      card.innerHTML = `
+        <div class="itophead">
+          <div class="icon-badge" style="background:${cat.color};color:${cat.fg}">${cat.emoji}</div>
+          <div class="itop">
+            <div class="row1">
+              <span class="time">${esc(it.time||"")}</span>
+              <span class="name">${esc(it.name||"이름 없음")}</span>
+              ${it.alarm? `<span class="alarmbadge">⏰ ${esc(it.alarm)}</span>`:""}
+            </div>
+            <div class="row2"><span class="tagpill">${esc(it.cat)}</span>${it.move? `<span class="tagpill">${esc(it.move)}</span>`:""}</div>
+          </div>
+        </div>
+        ${it.memo? `<div class="memo">${esc(it.memo)}</div>`:""}
+        <div class="actrow">
+          <button class="actbtn" data-act="dir">🧭 길찾기</button>
+          <button class="actbtn" data-act="map">📍 지도보기</button>
+          <button class="actbtn" data-act="ics">📅 캘린더</button>
+          ${(it.userDocs&&it.userDocs.length)? `<button class="actbtn" data-act="docs">📎 첨부(${it.userDocs.length})</button>`:""}
+          <button class="actbtn" data-act="edit">✏️ 편집</button>
+          <button class="actbtn danger" data-act="del">🗑️ 삭제</button>
+        </div>`;
+      card.querySelector('[data-act="dir"]').addEventListener("click", ()=>window.open(dirUrl(it),"_blank"));
+      card.querySelector('[data-act="map"]').addEventListener("click", ()=>window.open(searchUrl(it),"_blank"));
+      card.querySelector('[data-act="ics"]').addEventListener("click", ()=>downloadIcs([it], it.name||"일정"));
+      const docsBtn = card.querySelector('[data-act="docs"]');
+      if(docsBtn) docsBtn.addEventListener("click", ()=>{ if(it.userDocs[0]) openDataUrl(it.userDocs[0].data, it.userDocs[0].name); });
+      card.querySelector('[data-act="edit"]').addEventListener("click", ()=>openItemSheet(it.id));
+      card.querySelector('[data-act="del"]').addEventListener("click", (e)=>{
+        if(confirm("이 일정을 삭제할까요?")){ deleteItem(it.id); }
+      });
+      wrap.appendChild(card);
+    });
+  });
+}
+
+function flashItem(id){
+  const el = document.querySelector(`.itemcard[data-id="${id}"]`);
+  if(!el) return;
+  el.scrollIntoView({behavior:"smooth", block:"center"});
+  el.classList.add("flash");
+  setTimeout(()=>el.classList.remove("flash"), 1400);
+}
+
+/* ============ ICS Export ============ */
+function pad2(n){ return String(n).padStart(2,"0"); }
+function toIcsDate(day, time){
+  const [y,m,d] = day.split("-");
+  const [hh,mm] = (time||"00:00").split(":");
+  return `${y}${m}${d}T${pad2(hh)}${pad2(mm)}00`;
+}
+function downloadIcs(items, filename){
+  let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//J플래너//KR\r\nCALSCALE:GREGORIAN\r\n";
+  items.forEach(it=>{
+    if(!it.day) return;
+    const dtStart = toIcsDate(it.day, it.time||"09:00");
+    const endDate = addDays(parseDate(it.day + "T00:00:00".slice(0,0) || it.day), 0);
+    const [hh,mm] = (it.time||"09:00").split(":").map(Number);
+    let endH = hh, endM = mm+60, endDay = it.day;
+    if(endM>=60){ endM-=60; endH+=1; }
+    if(endH>=24){ endH-=24; endDay = fmtDate(addDays(parseDate(it.day),1)); }
+    const dtEnd = toIcsDate(endDay, `${pad2(endH)}:${pad2(endM)}`);
+    ics += "BEGIN:VEVENT\r\n";
+    ics += `UID:${it.id||uid()}@jplanner\r\n`;
+    ics += `DTSTAMP:${toIcsDate(todayStr(), "00:00")}Z\r\n`;
+    ics += `DTSTART:${dtStart}\r\n`;
+    ics += `DTEND:${dtEnd}\r\n`;
+    ics += `SUMMARY:${(it.name||"일정").replace(/\r?\n/g," ")}\r\n`;
+    if(it.place) ics += `LOCATION:${it.place.replace(/\r?\n/g," ")}\r\n`;
+    if(it.memo) ics += `DESCRIPTION:${it.memo.replace(/\r?\n/g,"\\n")}\r\n`;
+    if(it.alarm){
+      ics += "BEGIN:VALARM\r\n";
+      ics += "ACTION:DISPLAY\r\n";
+      ics += `DESCRIPTION:${(it.name||"일정")} 알람\r\n`;
+      const [ah,am] = it.alarm.split(":").map(Number);
+      const [sh,sm] = (it.time||"09:00").split(":").map(Number);
+      let diffMin = (sh*60+sm) - (ah*60+am);
+      ics += `TRIGGER:-PT${Math.max(diffMin,0)}M\r\n`;
+      ics += "END:VALARM\r\n";
+    }
+    ics += "END:VEVENT\r\n";
+  });
+  ics += "END:VCALENDAR\r\n";
+  const blob = new Blob([ics], {type:"text/calendar"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `${filename}.ics`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 30000);
+  toast("캘린더 파일을 내려받았어요");
+}
+
+/* ============ Item Sheet ============ */
+let editingItemId = null;
+let pendingFiles = [];
+function buildChips(container, options, onPick, getActive){
+  container.innerHTML = "";
+  options.forEach(opt=>{
+    const c = document.createElement("div");
+    c.className = "chip" + (getActive()===opt ? " sel":"");
+    c.textContent = (CATS[opt]? CATS[opt].emoji+" ":"") + opt;
+    c.addEventListener("click", ()=>{ onPick(opt); buildChips(container, options, onPick, getActive); });
+    container.appendChild(c);
+  });
+}
+function openItemSheet(id){
+  editingItemId = id || null;
+  pendingFiles = [];
+  const t = curTrip();
+  let it = id ? t.items.find(i=>i.id===id) : null;
+  let curCat = it ? it.cat : "명소";
+  let curMove = it ? it.move : "도보";
+
+  document.getElementById("itemEditTitle").textContent = it ? "일정 편집" : "일정 추가";
+  document.getElementById("if_day").value = it ? it.day : (selectedDay || todayStr());
+  document.getElementById("if_time").value = it ? it.time : "09:00";
+  document.getElementById("if_name").value = it ? it.name : "";
+  document.getElementById("if_place").value = it ? it.place : "";
+  document.getElementById("if_mapUrl").value = it ? it.mapUrl : "";
+  document.getElementById("if_alarm").value = it ? (it.alarm||"") : "";
+  document.getElementById("if_memo").value = it ? it.memo : "";
+  document.getElementById("if_delete").style.display = it ? "block" : "none";
+
+  buildChips(document.getElementById("if_catChips"), Object.keys(CATS), (v)=>curCat=v, ()=>curCat);
+  buildChips(document.getElementById("if_moveChips"), MOVES, (v)=>curMove=v, ()=>curMove);
+
+  renderFileList(it ? (it.userDocs||[]) : []);
+
+  document.getElementById("if_save").onclick = ()=>{
+    const day = document.getElementById("if_day").value;
+    const time = document.getElementById("if_time").value;
+    const name = document.getElementById("if_name").value.trim();
+    if(!day || !name){ toast("날짜와 이름을 입력해주세요"); return; }
+    const place = document.getElementById("if_place").value.trim();
+    const mapUrl = document.getElementById("if_mapUrl").value.trim();
+    const alarm = document.getElementById("if_alarm").value;
+    const memo = document.getElementById("if_memo").value.trim();
+    const existingDocs = it ? (it.userDocs||[]).filter(d=>!d._removed) : [];
+    const newDocs = existingDocs.concat(pendingFiles);
+
+    const finish = (lat, lng)=>{
+      if(it){
+        Object.assign(it, {day,time,name,place,mapUrl,cat:curCat,move:curMove,alarm,memo,userDocs:newDocs,
+          lat: lat!=null?lat:it.lat, lng: lng!=null?lng:it.lng});
+      } else {
+        t.items.push({id:uid(), day,time,name,place,mapUrl,cat:curCat,move:curMove,alarm,memo,
+          lat: lat!=null?lat:null, lng: lng!=null?lng:null, userDocs:newDocs});
+      }
+      persist();
+      closeSheet();
+      renderAll();
+      toast("일정을 저장했어요");
+      scheduleAlarmCheck();
+    };
+
+    const needsGeo = place && (!it || it.lat==null || it.place !== place);
+    if(needsGeo){
+      geocode(place).then(res=>{ finish(res?res.lat:null, res?res.lng:null); }).catch(()=>finish(null,null));
+    } else {
+      finish(it?it.lat:null, it?it.lng:null);
+    }
+  };
+  document.getElementById("if_delete").onclick = ()=>{
+    if(it && confirm("이 일정을 삭제할까요?")) deleteItem(it.id);
+  };
+  openSheet("sheetItem");
+}
+function deleteItem(id){
+  const t = curTrip();
+  t.items = t.items.filter(i=>i.id!==id);
+  persist();
+  closeSheet();
+  renderAll();
+  toast("일정을 삭제했어요");
+}
+function renderFileList(docs){
+  const list = document.getElementById("if_fileList");
+  list.innerHTML = "";
+  docs.filter(d=>!d._removed).forEach((d, idx)=>{
+    const chip = document.createElement("div");
+    chip.className = "filechip";
+    chip.innerHTML = `<span>${esc(d.name)}</span><span class="x">✕</span>`;
+    chip.querySelector(".x").addEventListener("click", ()=>{
+      d._removed = true;
+      renderFileList(docs);
+    });
+    list.appendChild(chip);
+  });
+  pendingFiles.forEach((d)=>{
+    const chip = document.createElement("div");
+    chip.className = "filechip";
+    chip.innerHTML = `<span>${esc(d.name)}</span><span class="x">✕</span>`;
+    chip.querySelector(".x").addEventListener("click", ()=>{
+      pendingFiles = pendingFiles.filter(f=>f!==d);
+      renderFileList(docs);
+    });
+    list.appendChild(chip);
+  });
+}
+document.getElementById("if_filepick").addEventListener("click", ()=>{
+  document.getElementById("fileItemAttach").click();
+});
+document.getElementById("fileItemAttach").addEventListener("change", (e)=>{
+  const files = Array.from(e.target.files||[]);
+  let remaining = files.length;
+  if(!remaining) return;
+  files.forEach(f=>{
+    if(f.type.startsWith("image/")){
+      resizeImageToDataUrl(f, 1280, 0.8).then(dataUrl=>{
+        pendingFiles.push({name:f.name, data:dataUrl});
+        renderFileList(curEditDocs());
+      });
+    } else {
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        pendingFiles.push({name:f.name, data:reader.result});
+        renderFileList(curEditDocs());
+      };
+      reader.readAsDataURL(f);
+    }
+  });
+  e.target.value = "";
+});
+function curEditDocs(){
+  const t = curTrip();
+  const it = editingItemId ? t.items.find(i=>i.id===editingItemId) : null;
+  return it ? (it.userDocs||[]) : [];
+}
+function resizeImageToDataUrl(file, maxDim, quality){
+  return new Promise((resolve)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w>h && w>maxDim){ h = h*maxDim/w; w = maxDim; }
+        else if(h>=w && h>maxDim){ w = w*maxDim/h; h = maxDim; }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = ()=>resolve(reader.result);
+      img.src = reader.result;
+    };
+    reader.onerror = ()=>resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ============ Geocoding ============ */
+const geoCache = {};
+async function geocode(query){
+  if(!query) return null;
+  if(geoCache[query]) return geoCache[query];
+  try{
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+    if(data && data[0]){
+      const r = {lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon)};
+      geoCache[query] = r;
+      return r;
+    }
+  }catch(e){ console.warn("geocode fail", e); }
+  return null;
+}
+
+/* ============ Flight Sheet ============ */
+let editingFlightId = null;
+function openFlightSheet(id){
+  editingFlightId = id || null;
+  const t = curTrip();
+  const f = id ? t.flights.find(x=>x.id===id) : null;
+  document.getElementById("flightEditTitle").textContent = f ? "항공편 편집" : "항공편 추가";
+  document.getElementById("ff_fromCode").value = f? f.fromCode:"";
+  document.getElementById("ff_toCode").value = f? f.toCode:"";
+  document.getElementById("ff_fromCity").value = f? f.fromCity:"";
+  document.getElementById("ff_toCity").value = f? f.toCity:"";
+  document.getElementById("ff_fromDate").value = f? f.fromDate : (t.start||"");
+  document.getElementById("ff_fromTime").value = f? f.fromTime:"";
+  document.getElementById("ff_toDate").value = f? f.toDate : (t.start||"");
+  document.getElementById("ff_toTime").value = f? f.toTime:"";
+  document.getElementById("ff_meta").value = f? f.meta:"";
+  document.getElementById("ff_delete").style.display = f ? "block":"none";
+  document.getElementById("ff_save").onclick = ()=>{
+    const obj = {
+      id: f? f.id : uid(),
+      fromCode: document.getElementById("ff_fromCode").value.trim().toUpperCase(),
+      toCode: document.getElementById("ff_toCode").value.trim().toUpperCase(),
+      fromCity: document.getElementById("ff_fromCity").value.trim(),
+      toCity: document.getElementById("ff_toCity").value.trim(),
+      fromDate: document.getElementById("ff_fromDate").value,
+      fromTime: document.getElementById("ff_fromTime").value,
+      toDate: document.getElementById("ff_toDate").value,
+      toTime: document.getElementById("ff_toTime").value,
+      meta: document.getElementById("ff_meta").value.trim()
+    };
+    if(!t.flights) t.flights = [];
+    if(f){ Object.assign(f, obj); } else { t.flights.push(obj); }
+    persist(); closeSheet(); renderAll(); toast("항공편을 저장했어요");
+  };
+  document.getElementById("ff_delete").onclick = ()=>{
+    if(confirm("항공편을 삭제할까요?")){
+      t.flights = t.flights.filter(x=>x.id!==f.id);
+      persist(); closeSheet(); renderAll(); toast("항공편을 삭제했어요");
+    }
+  };
+  openSheet("sheetFlight");
+}
+document.getElementById("addFlightBtn").addEventListener("click", ()=>openFlightSheet(null));
+document.getElementById("addItemBtn").addEventListener("click", ()=>openItemSheet(null));
+
+/* ============ Trip list / edit ============ */
+function renderTripList(){
+  const wrap = document.getElementById("tripListWrap");
+  wrap.innerHTML = "";
+  DB.trips.forEach(t=>{
+    const row = document.createElement("div");
+    row.className = "triprow";
+    const nights = (t.start&&t.end)? daysBetween(t.start,t.end) : 0;
+    row.innerHTML = `
+      <div class="tinfo">
+        <div class="ttitle">${t.id===DB.activeId?'<span class="checkmark">✓</span>':""}${esc(t.title||"제목 없음")}</div>
+        <div class="tmeta">${t.start&&t.end? `${t.start} ~ ${t.end} · ${nights}박` : "날짜 미정"} · 일정 ${ (t.items||[]).length }개</div>
+      </div>
+      <div class="tripbtns">
+        <button class="smallbtn" data-act="edit">✏️</button>
+        ${DB.trips.length>1? `<button class="smallbtn del" data-act="del">🗑️</button>`:""}
+      </div>`;
+    row.querySelector(".tinfo").addEventListener("click", ()=>{
+      DB.activeId = t.id; selectedDay = null; persist(); closeSheet(); renderAll();
+      toast(`'${t.title}' 여행으로 전환했어요`);
+    });
+    row.querySelector('[data-act="edit"]').addEventListener("click", ()=>openTripEditSheet(t.id));
+    const delBtn = row.querySelector('[data-act="del"]');
+    if(delBtn){
+      let confirmState = false;
+      delBtn.addEventListener("click", (e)=>{
+        e.stopPropagation();
+        if(!confirmState){
+          confirmState = true;
+          delBtn.classList.add("confirm");
+          delBtn.textContent = "확인";
+          setTimeout(()=>{ confirmState=false; delBtn.classList.remove("confirm"); delBtn.textContent="🗑️"; }, 2500);
+        } else {
+          DB.trips = DB.trips.filter(x=>x.id!==t.id);
+          if(DB.activeId===t.id) DB.activeId = DB.trips[0].id;
+          selectedDay = null;
+          persist(); renderTripList(); renderAll();
+          toast("여행을 삭제했어요");
+        }
+      });
+    }
+    wrap.appendChild(row);
+  });
+}
+document.getElementById("tripSwitch").addEventListener("click", ()=>{ renderTripList(); openSheet("sheetTrips"); });
+document.getElementById("newTripBtn2").addEventListener("click", ()=>openTripEditSheet(null));
+function openTripEditSheet(id){
+  const t = id ? DB.trips.find(x=>x.id===id) : null;
+  document.getElementById("tripEditTitle").textContent = t ? "여행 편집" : "새 여행 만들기";
+  document.getElementById("tf_title").value = t? t.title:"";
+  document.getElementById("tf_start").value = t? t.start:"";
+  document.getElementById("tf_end").value = t? t.end:"";
+  document.getElementById("tf_note").value = t? t.note:"";
+  document.getElementById("tf_cities").value = t? (t.cities||[]).join(", ") : "";
+  document.getElementById("tf_delete").style.display = (t && DB.trips.length>1) ? "block":"none";
+  document.getElementById("tf_save").onclick = ()=>{
+    const title = document.getElementById("tf_title").value.trim();
+    const start = document.getElementById("tf_start").value;
+    const end = document.getElementById("tf_end").value;
+    if(!title || !start || !end){ toast("제목과 기간을 입력해주세요"); return; }
+    if(end < start){ toast("종료일이 시작일보다 빠를 수 없어요"); return; }
+    const note = document.getElementById("tf_note").value.trim();
+    const cities = document.getElementById("tf_cities").value.split(",").map(s=>s.trim()).filter(Boolean);
+    if(t){
+      Object.assign(t, {title,start,end,note,cities});
+    } else {
+      const nt = {id:uid(), title,start,end,note,cities,flights:[],items:[],bg:""};
+      DB.trips.push(nt);
+      DB.activeId = nt.id;
+    }
+    selectedDay = null;
+    persist(); closeSheet(); renderTripList(); renderAll();
+    toast("여행을 저장했어요");
+  };
+  document.getElementById("tf_delete").onclick = ()=>{
+    if(t && DB.trips.length>1 && confirm("이 여행을 삭제할까요? 모든 일정이 함께 삭제됩니다.")){
+      DB.trips = DB.trips.filter(x=>x.id!==t.id);
+      if(DB.activeId===t.id) DB.activeId = DB.trips[0].id;
+      selectedDay = null;
+      persist(); closeSheet(); renderTripList(); renderAll();
+      toast("여행을 삭제했어요");
+    }
+  };
+  openSheet("sheetTripEdit");
+}
+document.getElementById("newTripBtn").addEventListener("click", ()=>openTripEditSheet(null));
+
+/* ============ Header bg photo ============ */
+document.getElementById("camBtn").addEventListener("click", ()=>document.getElementById("fileHeaderBg").click());
+document.getElementById("fileHeaderBg").addEventListener("change", async (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const dataUrl = await resizeImageToDataUrl(f, 1000, 0.82);
+  const t = curTrip();
+  t.bg = dataUrl;
+  persist(); renderHeader();
+  toast("배경 사진을 변경했어요");
+  e.target.value = "";
+});
+
+/* ============ Settings ============ */
+document.getElementById("settingsBtn").addEventListener("click", ()=>{
+  const t = curTrip();
+  document.getElementById("st_title").value = t.title || "";
+  document.getElementById("st_reset").classList.remove("confirm");
+  document.getElementById("st_reset").textContent = "초기화";
+  openSheet("sheetSettings");
+});
+document.getElementById("st_save").addEventListener("click", ()=>{
+  const t = curTrip();
+  const v = document.getElementById("st_title").value.trim();
+  if(v) t.title = v;
+  persist(); closeSheet(); renderAll(); toast("설정을 저장했어요");
+});
+document.getElementById("st_bg").addEventListener("click", ()=>document.getElementById("fileHeaderBg").click());
+document.getElementById("st_notif").addEventListener("click", ()=>{
+  if(!("Notification" in window)){ toast("이 브라우저는 알림을 지원하지 않아요"); return; }
+  Notification.requestPermission().then(p=>{
+    toast(p==="granted" ? "알림이 허용되었어요" : "알림이 거부되었어요");
+  });
+});
+document.getElementById("st_export").addEventListener("click", ()=>{
+  const blob = new Blob([JSON.stringify(DB,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `jplanner_backup_${todayStr()}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 30000);
+  toast("백업 파일을 내려받았어요");
+});
+document.getElementById("st_import").addEventListener("click", ()=>document.getElementById("fileImport").click());
+document.getElementById("fileImport").addEventListener("change", (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const data = JSON.parse(reader.result);
+      if(data && Array.isArray(data.trips) && data.trips.length){
+        DB = data;
+        if(!DB.activeId || !DB.trips.find(t=>t.id===DB.activeId)) DB.activeId = DB.trips[0].id;
+        selectedDay = null;
+        persist(); closeSheet(); renderAll();
+        toast("데이터를 불러왔어요");
+      } else { toast("올바른 백업 파일이 아니에요"); }
+    }catch(err){ toast("파일을 읽을 수 없어요"); }
+  };
+  reader.readAsText(f);
+  e.target.value = "";
+});
+document.getElementById("st_ics").addEventListener("click", ()=>{
+  const t = curTrip();
+  downloadIcs(t.items||[], t.title||"여행일정");
+});
+let resetConfirm = false;
+document.getElementById("st_reset").addEventListener("click", (e)=>{
+  const btn = e.target;
+  if(!resetConfirm){
+    resetConfirm = true;
+    btn.classList.add("confirm");
+    btn.textContent = "확인(한번 더)";
+    setTimeout(()=>{ resetConfirm=false; btn.classList.remove("confirm"); btn.textContent="초기화"; }, 2500);
+  } else {
+    DB = seedData();
+    selectedDay = null;
+    persist(); closeSheet(); renderAll();
+    toast("모든 데이터를 초기화했어요");
+  }
+});
+
+/* ============ Usage sheet ============ */
+document.getElementById("usageBtn").addEventListener("click", ()=>openSheet("sheetUsage"));
+
+/* ============ Page tabs ============ */
+document.querySelectorAll("#pageTabs button").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll("#pageTabs button").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+    document.getElementById("page-"+btn.dataset.page).classList.add("active");
+    if(btn.dataset.page === "overview"){ setTimeout(renderOverview, 50); }
+  });
+});
+
+/* ============ Alarm ============ */
+let alarmedKeys = new Set();
+function beep(){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.type = "sine"; o.frequency.value = 880;
+    g.gain.setValueAtTime(0.18, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.5);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime+0.5);
+  }catch(e){}
+}
+function showAlarmPopup(title, sub){
+  document.getElementById("alarmTitle").textContent = "⏰ " + title;
+  document.getElementById("alarmSub").textContent = sub;
+  const el = document.getElementById("alarmPop");
+  el.classList.add("show");
+  setTimeout(()=>el.classList.remove("show"), 5000);
+}
+function checkAlarms(){
+  const now = new Date();
+  const hh = pad2(now.getHours()), mm = pad2(now.getMinutes());
+  const nowTime = `${hh}:${mm}`;
+  const nowDay = fmtDate(now);
+  DB.trips.forEach(t=>{
+    (t.items||[]).forEach(it=>{
+      if(it.alarm && it.day===nowDay && it.alarm===nowTime){
+        const key = t.id+"_"+it.id+"_"+nowDay+"_"+nowTime;
+        if(!alarmedKeys.has(key)){
+          alarmedKeys.add(key);
+          beep();
+          showAlarmPopup(it.name, `${it.time} · ${it.cat}`);
+          if("Notification" in window && Notification.permission === "granted"){
+            try{ new Notification("⏰ "+it.name, {body:`${it.time} · ${it.cat}`}); }catch(e){}
+          }
+        }
+      }
+    });
+  });
+}
+let alarmTimer = null;
+function scheduleAlarmCheck(){
+  if(alarmTimer) return;
+  alarmTimer = setInterval(checkAlarms, 15000);
+  checkAlarms();
+}
+
+/* ============ Overview / Map ============ */
+let map, routeLayer, pinLayer, charMarker, charDom;
+let ovItems = [], ovIndex = 0, ovAnimating = false;
+const routeCache = {};
+
+function initMap(){
+  if(map) return;
+  map = L.map("map", {zoomControl:true, attributionControl:false}).setView([35.6762,139.6503], 12);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19}).addTo(map);
+  routeLayer = L.layerGroup().addTo(map);
+  pinLayer = L.layerGroup().addTo(map);
+}
+
+function spriteGroup(move){
+  switch(move){
+    case "택시": case "버스": return "car";
+    case "기차": case "지하철": return "train";
+    case "트램": return "tram";
+    case "항공": return "plane";
+    case "자전거": return "bike";
+    default: return "walk";
+  }
+}
+
+/* ---- SVG 픽셀아트 캐릭터 스프라이트 ---- */
+const PXU = 3; /* pixel unit size */
+function px(x,y,w,h,c){ return `<rect x="${x*PXU}" y="${y*PXU}" width="${w*PXU}" height="${h*PXU}" fill="${c}"/>`; }
+function walkSprite(frame){
+  const SKIN="#f2c19a", SHIRT="#d9724a", PANTS="#1b4b7a", SHOE="#2b2b2b", HAIR="#2b2b2b";
+  let out = "";
+  out += px(2,0,4,1,HAIR);
+  out += px(2,1,4,2,SKIN);
+  out += px(1,3,6,5,SHIRT);
+  if(frame===0){
+    out += px(1,8,2,3,PANTS); out += px(1,11,2,1,SHOE);
+    out += px(5,8,2,3,PANTS); out += px(5,11,2,1,SHOE);
+  } else {
+    out += px(2,8,2,3,PANTS); out += px(2,11,2,1,SHOE);
+    out += px(4,8,2,3,PANTS); out += px(4,11,2,1,SHOE);
+  }
+  return {svg: out, w:8, h:12};
+}
+function bikeSprite(frame){
+  const base = walkSprite(frame);
+  let out = base.svg;
+  out += `<circle cx="${0.5*PXU}" cy="${11.5*PXU}" r="${1.4*PXU}" fill="none" stroke="#2b2b2b" stroke-width="${0.6*PXU}"/>`;
+  out += `<circle cx="${7.5*PXU}" cy="${11.5*PXU}" r="${1.4*PXU}" fill="none" stroke="#2b2b2b" stroke-width="${0.6*PXU}"/>`;
+  return {svg: out, w:8, h:13};
+}
+function carSprite(){
+  const BODY="#e0a94e", GLASS="#dfe6ee", DARK="#2b2b2b";
+  let out = "";
+  out += px(2,0,8,2,BODY);
+  out += px(3,0,2,2,GLASS);
+  out += px(7,0,2,2,GLASS);
+  out += px(0,2,12,4,BODY);
+  out += px(0,3,12,1,DARK);
+  out += px(1,6,2,2,DARK);
+  out += px(9,6,2,2,DARK);
+  return {svg: out, w:12, h:8};
+}
+function trainSprite(){
+  const BODY="#c0392b", GLASS="#dfe6ee", DARK="#2b2b2b", LIGHT="#e0a94e";
+  let out = "";
+  out += px(1,0,10,1,BODY);
+  out += px(0,1,12,6,BODY);
+  out += px(1,2,3,2,GLASS);
+  out += px(5,2,3,2,GLASS);
+  out += px(9,2,2,2,GLASS);
+  out += px(5,7,2,1,LIGHT);
+  out += px(1,8,2,1,DARK);
+  out += px(9,8,2,1,DARK);
+  return {svg: out, w:12, h:9};
+}
+function tramSprite(){
+  const BODY="#3f7cb0", GLASS="#dfe6ee", DARK="#2b2b2b", GOLD="#e0a94e";
+  let out = "";
+  out += px(5,0,1,2,DARK);
+  out += px(1,2,10,5,BODY);
+  out += px(2,3,2,2,GLASS);
+  out += px(5,3,2,2,GLASS);
+  out += px(8,3,2,2,GLASS);
+  out += px(5,7,2,1,GOLD);
+  out += px(2,8,2,1,DARK);
+  out += px(8,8,2,1,DARK);
+  return {svg: out, w:12, h:9};
+}
+function planeSprite(){
+  const BODY="#3f7cb0", TIP="#e0a94e";
+  let out = "";
+  out += px(4,3,7,2,BODY);
+  out += px(3,1,3,2,BODY);
+  out += px(3,5,3,2,BODY);
+  out += px(11,3,2,2,TIP);
+  out += px(0,4,3,1,BODY);
+  return {svg: out, w:13, h:8};
+}
+function buildSpriteSVG(group, frame){
+  let s;
+  if(group==="walk") s = walkSprite(frame);
+  else if(group==="bike") s = bikeSprite(frame);
+  else if(group==="car") s = carSprite();
+  else if(group==="train") s = trainSprite();
+  else if(group==="tram") s = tramSprite();
+  else if(group==="plane") s = planeSprite();
+  else s = walkSprite(frame);
+  const vw = s.w*PXU, vh = s.h*PXU;
+  return `<svg width="${vw}" height="${vh}" viewBox="0 0 ${vw} ${vh}" shape-rendering="crispEdges" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))">${s.svg}</svg>`;
+}
+let walkFrameTimer = null;
+let curWalkFrame = 0;
+function startWalkFrames(group){
+  stopWalkFrames();
+  if(group!=="walk" && group!=="bike") return;
+  walkFrameTimer = setInterval(()=>{
+    curWalkFrame = curWalkFrame ? 0 : 1;
+    const el = document.getElementById("charSvg");
+    if(el) el.innerHTML = buildSpriteSVG(group, curWalkFrame);
+  }, 220);
+}
+function stopWalkFrames(){
+  if(walkFrameTimer){ clearInterval(walkFrameTimer); walkFrameTimer = null; }
+}
+
+async function fetchRoute(a, b){
+  const key = `${a.lat},${a.lng}-${b.lat},${b.lng}`;
+  if(routeCache[key]) return routeCache[key];
+  try{
+    const url = `https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data && data.routes && data.routes[0]){
+      const coords = data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+      routeCache[key] = coords;
+      return coords;
+    }
+  }catch(e){ console.warn("route fail", e); }
+  const fallback = [[a.lat,a.lng],[b.lat,b.lng]];
+  routeCache[key] = fallback;
+  return fallback;
+}
+
+function updateOvBottom(){
+  const total = ovItems.length;
+  document.getElementById("ovProgress").textContent = `오늘의 여정 ${total? ovIndex+1:0}/${total}`;
+  document.getElementById("ovBarFill").style.width = total? `${((ovIndex+1)/total*100)}%` : "0%";
+  if(total){
+    const it = ovItems[ovIndex];
+    document.getElementById("ovNow").textContent = `${it.time} · ${it.name}`;
+    document.getElementById("ovNowSub").textContent = `${it.cat}${it.move? " · "+it.move:""}${it.place? " · "+it.place:""}`;
+  } else {
+    document.getElementById("ovNow").textContent = "일정이 없습니다";
+    document.getElementById("ovNowSub").textContent = "";
+  }
+}
+
+function renderOverview(){
+  initMap();
+  setTimeout(()=>map.invalidateSize(), 60);
+  const t = curTrip();
+  const day = selectedDay || tripDates(t)[0];
+  ovItems = dayItems(t, day).filter(it=>it.lat!=null && it.lng!=null);
+  pinLayer.clearLayers();
+  routeLayer.clearLayers();
+
+  if(!ovItems.length){
+    updateOvBottom();
+    return;
+  }
+  const bounds = [];
+  ovItems.forEach((it, idx)=>{
+    bounds.push([it.lat, it.lng]);
+    const icon = L.divIcon({className:"", html:`<div style="display:flex;flex-direction:column;align-items:center;">
+      <div class="pinlabel">${esc(it.time)} · ${esc(it.name)}</div>
+      <div class="pinnum" style="margin-top:2px">${idx+1}</div></div>`, iconSize:[1,1], iconAnchor:[13,13]});
+    const marker = L.marker([it.lat, it.lng], {icon}).addTo(pinLayer);
+    marker.on("click", ()=>{
+      document.querySelector('#pageTabs button[data-page="schedule"]').click();
+      setTimeout(()=>flashItem(it.id), 150);
+    });
+  });
+  if(bounds.length===1){ map.setView(bounds[0], 15); }
+  else { map.fitBounds(bounds, {padding:[40,40]}); }
+
+  ovIndex = 0;
+  const nowT = new Date();
+  if(fmtDate(nowT)===day){
+    const nowTime = `${pad2(nowT.getHours())}:${pad2(nowT.getMinutes())}`;
+    let bestIdx = 0;
+    for(let i=0;i<ovItems.length;i++){ if(ovItems[i].time <= nowTime) bestIdx = i; }
+    ovIndex = bestIdx;
+  }
+  drawStaticRoutes();
+  placeCharacter(ovIndex, false);
+  updateOvBottom();
+}
+
+async function drawStaticRoutes(){
+  routeLayer.clearLayers();
+  for(let i=0;i<ovItems.length-1;i++){
+    const a = ovItems[i], b = ovItems[i+1];
+    const coords = await fetchRoute(a,b);
+    const passed = i < ovIndex;
+    L.polyline(coords, passed? {color:"#1b4b7a", weight:4, opacity:0.9} : {color:"#9aa7b3", weight:3, opacity:0.8, dashArray:"6,7"}).addTo(routeLayer);
+  }
+}
+
+function ensureCharMarker(){
+  if(charMarker) return;
+  const html = `<div class="charwrap" id="charSvg"></div>`;
+  const icon = L.divIcon({className:"", html, iconSize:[30,30], iconAnchor:[15,15]});
+  charMarker = L.marker([0,0], {icon, zIndexOffset:1000}).addTo(map);
+}
+function setCharSprite(move){
+  const group = spriteGroup(move);
+  const el = document.getElementById("charSvg");
+  if(el) el.innerHTML = buildSpriteSVG(group, curWalkFrame);
+  startWalkFrames(group);
+}
+function placeCharacter(idx, animate){
+  ensureCharMarker();
+  const it = ovItems[idx];
+  if(!it) return;
+  charMarker.setLatLng([it.lat, it.lng]);
+  setCharSprite(it.move);
+  map.panTo([it.lat, it.lng], {animate:true});
+}
+
+function distKm(a,b){
+  const R=6371, dLat=(b.lat-a.lat)*Math.PI/180, dLng=(b.lng-a.lng)*Math.PI/180;
+  const s = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+}
+
+async function animateToIndex(targetIdx){
+  if(ovAnimating || targetIdx===ovIndex || targetIdx<0 || targetIdx>=ovItems.length) return;
+  ovAnimating = true;
+  const dir = targetIdx > ovIndex ? 1 : -1;
+  let cur = ovIndex;
+  while(cur !== targetIdx){
+    const next = cur + dir;
+    const a = ovItems[cur], b = ovItems[next];
+    const coords = await fetchRoute(a,b);
+    const path = dir>0 ? coords : coords.slice().reverse();
+    const km = distKm(a,b);
+    const dur = Math.max(1600, Math.min(4000, km*250 + 1200));
+    ensureCharMarker();
+    setCharSprite(dir>0? b.move : a.move);
+    await animatePath(path, dur);
+    stopWalkFrames();
+    cur = next;
+    ovIndex = cur;
+    updateOvBottom();
+    drawStaticRoutes();
+  }
+  ovAnimating = false;
+}
+function animatePath(path, dur){
+  return new Promise(resolve=>{
+    const start = performance.now();
+    const n = path.length;
+    function step(now){
+      const t = Math.min(1, (now-start)/dur);
+      const pos = t*(n-1);
+      const i0 = Math.floor(pos), i1 = Math.min(n-1, i0+1);
+      const f = pos - i0;
+      const lat = path[i0][0] + (path[i1][0]-path[i0][0])*f;
+      const lng = path[i0][1] + (path[i1][1]-path[i0][1])*f;
+      if(charMarker) charMarker.setLatLng([lat,lng]);
+      const bounds = map.getBounds();
+      if(!bounds.contains([lat,lng])){ map.panTo([lat,lng], {animate:false}); }
+      if(t<1){ requestAnimationFrame(step); } else { resolve(); }
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+document.getElementById("ovPrev").addEventListener("click", ()=>animateToIndex(ovIndex-1));
+document.getElementById("ovNext").addEventListener("click", ()=>animateToIndex(ovIndex+1));
+document.getElementById("ovNow2").addEventListener("click", ()=>{
+  const t = curTrip();
+  const day = selectedDay || tripDates(t)[0];
+  const nowT = new Date();
+  if(fmtDate(nowT)===day && ovItems.length){
+    const nowTime = `${pad2(nowT.getHours())}:${pad2(nowT.getMinutes())}`;
+    let bestIdx = 0;
+    for(let i=0;i<ovItems.length;i++){ if(ovItems[i].time <= nowTime) bestIdx = i; }
+    animateToIndex(bestIdx);
+  } else {
+    toast("오늘 날짜의 일정이 아니에요");
+  }
+});
+
+/* ============ Full render ============ */
+function renderAll(){
+  renderHeader();
+  renderDateTabs();
+  renderFlights();
+  renderDocs();
+  renderItems();
+  if(document.getElementById("page-overview").classList.contains("active")) renderOverview();
+}
+
+renderAll();
+scheduleAlarmCheck();
+
+/* ============ PWA manifest (data URI) ============ */
+(function(){
+  const icon = "data:image/svg+xml," + encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512'><rect width='512' height='512' rx='96' fill='%231b4b7a'/><text x='50%' y='58%' font-size='260' text-anchor='middle' fill='white' font-family='sans-serif'>J</text></svg>`
+  );
+  const manifest = {
+    name: "J플래너", short_name: "J플래너", start_url: ".", display: "standalone",
+    background_color: "#f6f8fa", theme_color: "#1b4b7a",
+    icons: [{src:icon, sizes:"192x192", type:"image/svg+xml"},{src:icon, sizes:"512x512", type:"image/svg+xml"}]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type:"application/json"});
+  document.getElementById("manifestLink").href = URL.createObjectURL(blob);
+})();
+
+window.addEventListener("error", (e)=>{ console.error("App error:", e.message); });
+
+})();
+</script>
+</body>
+</html>
