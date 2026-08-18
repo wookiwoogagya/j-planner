@@ -214,6 +214,23 @@ a{color:inherit;text-decoration:none;}
   display:flex;align-items:center;justify-content:center;flex:none;}
 .stepline .stext{font-size:13px;line-height:1.5;padding-top:1px;}
 
+/* food picker */
+.foodcard{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px;}
+.foodtop{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.foodname{font-weight:800;font-size:14.5px;}
+.foodbadges{display:flex;gap:4px;flex:none;}
+.foodbadge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:7px;}
+.foodbadge.city-오사카{background:#fdecea;color:#c0392b;}
+.foodbadge.city-교토{background:#e6f4ea;color:#1f8a53;}
+.foodbadge.type-식당{background:#fdeadb;color:#c76a1f;}
+.foodbadge.type-카페{background:#f0e4f7;color:#7e22ce;}
+.foodarea{font-size:11.5px;color:var(--sub);margin-top:4px;}
+.fooddesc{font-size:12.5px;color:var(--ink);margin-top:6px;line-height:1.5;}
+.foodmenu{font-size:11.5px;color:var(--navy);background:#eef1f4;padding:4px 8px;border-radius:8px;margin-top:6px;display:inline-block;}
+.foodaddbtn{width:100%;border:none;background:var(--navy);color:#fff;font-weight:800;font-size:12.5px;
+  padding:9px;border-radius:10px;cursor:pointer;margin-top:10px;}
+.foodempty{text-align:center;color:var(--sub);font-size:13px;padding:30px 0;}
+
 /* settings */
 .setrow{display:flex;align-items:center;justify-content:between;justify-content:space-between;padding:12px 4px;
   border-bottom:1px solid var(--border);}
@@ -307,6 +324,7 @@ a{color:inherit;text-decoration:none;}
 
 <div id="bottombar">
   <button class="secondary btn-press" id="settingsBtn">⚙️</button>
+  <button class="secondary btn-press" id="addFoodBtn" style="width:auto;padding:0 12px;white-space:nowrap;">🍴 맛집추가</button>
   <button class="primary btn-press" id="addItemBtn">＋ 일정 추가</button>
 </div>
 
@@ -439,6 +457,21 @@ a{color:inherit;text-decoration:none;}
   </div>
 </div>
 
+<!-- 맛집 후보지 시트 -->
+<div class="sheet" id="sheetFoodPicker">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><h3>방문후보지에서 맛집 추가</h3><button class="sheet-close" data-close>✕</button></div>
+  <div class="sheet-body">
+    <div class="field" style="margin-bottom:10px;">
+      <input type="text" id="fp_search" placeholder="이름·지역·메뉴로 검색" style="width:100%;border:1px solid var(--border);border-radius:12px;padding:11px 12px;font-size:14px;background:#fbfcfd;">
+    </div>
+    <div class="chiprow" id="fp_cityChips" style="margin-bottom:8px;"></div>
+    <div class="chiprow" id="fp_typeChips" style="margin-bottom:12px;"></div>
+    <div id="fp_count" style="font-size:11.5px;color:var(--sub);font-weight:700;margin-bottom:8px;"></div>
+    <div id="fp_list"></div>
+  </div>
+</div>
+
 <div id="hiddenInputs">
   <input type="file" id="fileHeaderBg" accept="image/*">
   <input type="file" id="fileItemAttach" accept="image/*,application/pdf" multiple>
@@ -516,6 +549,121 @@ let DB = safeGet() || seedData();
 if(!DB.trips || !DB.trips.length){ DB = seedData(); }
 function persist(){ safeSet(DB); }
 persist();
+
+/* ============ 오사카·교토 여행 (요청으로 추가된 일정, 1회성 삽입) ============ */
+function osakaKyotoTrip(){
+  const D = {d1:"2026-10-07", d2:"2026-10-08", d3:"2026-10-09", d4:"2026-10-10"};
+  const it = (day,time,cat,name,place,memo,move,lat,lng)=>({
+    id: uid(), day, time, cat, name, place, mapUrl:"", memo, move, alarm:"", lat, lng, userDocs:[]
+  });
+  return {
+    id: "osaka_kyoto_2026_10",
+    title: "오사카·교토 여행",
+    start: D.d1, end: D.d4,
+    note: "",
+    cities: ["교토","오사카"],
+    bg: "",
+    flights: [
+      {id:"ok_fl1", fromCode:"ICN", toCode:"KIX", fromCity:"서울", toCity:"오사카",
+        fromDate:D.d1, fromTime:"10:10", toDate:D.d1, toTime:"12:00", meta:"진에어 LJ233"},
+      {id:"ok_fl2", fromCode:"KIX", toCode:"ICN", fromCity:"오사카", toCity:"서울",
+        fromDate:D.d4, fromTime:"13:10", toDate:D.d4, toTime:"15:00", meta:"진에어 LJ234"}
+    ],
+    items: [
+      it(D.d1,"12:30","이동","교토로 이동 (JR 하루카)","교토역, 교토","간사이공항에서 JR 특급 하루카로 약 75분. 좌석 지정권 미리 구매 추천.","기차",34.9858,135.7588),
+      it(D.d1,"14:30","명소","후시미이나리타이샤","후시미이나리타이샤, 교토","천 개의 도리이로 유명한 신사, 입장 무료. 편한 신발 필수.","지하철",34.9671,135.7727),
+      it(D.d1,"16:30","카페","베르밀리온 카페","Vermillion Cafe, 후시미이나리, 교토","후시미이나리 대나무숲 옆 브런치 카페. 커피·디저트류로 주문(해산물 메뉴는 피하기).","도보",34.9700,135.7745),
+      it(D.d1,"18:00","식당","교토 가츠규 본점 (폰토초점)","Kyoto Katsugyu Pontocho, 폰토초, 교토","소고기 살치살을 개인 화로에 취향껏 익혀 먹는 원조 규카츠 정식. 완전히 익혀 먹어 부담 없고, 폰토초 골목 분위기까지 함께 즐기기 좋음.","도보",35.0055,135.7710),
+      it(D.d1,"19:30","이동","오사카 난바로 이동","난바역, 오사카","한큐/JR 특급으로 약 45~55분 소요.","기차",34.6656,135.5019),
+      it(D.d1,"20:30","숙소","난바 호텔 체크인","난바, 오사카","3박 베이스 숙소. 난바·도톤보리 도보권 위치 추천.","도보",34.6660,135.5025),
+
+      it(D.d2,"09:00","카페","% Arabica 오사카","% Arabica, 오사카","라떼아트로 유명한 스페셜티 커피 체인. 가볍게 아침 대용.","도보",34.6710,135.5030),
+      it(D.d2,"10:30","명소","오사카성","오사카성, 오사카","덴슈카쿠 전망대와 니시노마루 정원 산책.","지하철",34.6873,135.5262),
+      it(D.d2,"13:00","식당","니쿠야 타케루","肉屋タケル, 난바, 오사카","소규모 와규 야키니쿠 맛집. 미슐랭에도 소개된 곳으로 네이버 블로그 후기 다수, 예약 권장.","지하철",34.6688,135.5020),
+      it(D.d2,"15:00","명소","신세카이·츠텐카쿠","츠텐카쿠, 오사카","레트로한 분위기의 오사카 구시가지 대표 스팟.","지하철",34.6524,135.5064),
+      it(D.d2,"17:00","쇼핑","쿠로몬이치바시장","쿠로몬이치바시장, 오사카","오사카의 부엌이라 불리는 전통시장. 해산물 코너는 구경만.","도보",34.6656,135.5064),
+      it(D.d2,"19:00","식당","오코노미야키 미즈노","Mizuno Okonomiyaki Osaka, 도톤보리, 오사카","밀가루 대신 마(참마)를 듬뿍 넣어 입안에서 부드럽게 녹는 산마야키 명가. 1945년 창업한 오사카 오코노미야끼 원조격 노포로 네이버 블로그 최상위권 단골 맛집. 웨이팅 감안.","도보",34.6685,135.5030),
+      it(D.d2,"20:30","식당","와나카 타코야키 도구야스지 본점","わなか 道具屋筋本店, 오사카","겉바속촉 타코야키로 관광객·현지인 모두에게 최고 평가받는 곳. 도톤보리에서 도보 5~10분.","도보",34.6647,135.5005),
+      it(D.d2,"21:15","명소","도톤보리 야경 산책","도톤보리, 오사카","글리코 상 포토스팟에서 야경 감상.","도보",34.6688,135.5010),
+
+      it(D.d3,"09:30","명소","우메다 스카이빌딩","우메다 스카이빌딩, 오사카","공중정원 전망대에서 오사카 시내 전경 조망.","지하철",34.7054,135.4907),
+      it(D.d3,"11:30","카페","살롱 드 몽셰르 도지마 본점","サロン・ド・モンシェール 堂島本店, 오사카","오사카 대표 롤케이크(도지마롤) 맛집.","도보",34.6963,135.4936),
+      it(D.d3,"13:00","식당","킨큐에몬 라멘 난바점","麺屋 金久右衛門 なんば店, 오사카","돈코츠 베이스 마늘라멘 전문. 해산물 육수 아님, 한국인 여행객 인기.","지하철",34.6656,135.5010),
+      it(D.d3,"15:00","쇼핑","신사이바시스지 상점가","신사이바시, 오사카","드럭스토어·편집숍이 모인 쇼핑 스트리트.","도보",34.6733,135.5013),
+      it(D.d3,"19:00","식당","쿠시카츠 쵸토에야데 난바점","串かつ ちょっとええで なんば店, 오사카","고기·야채 꼬치튀김 전문점. 해산물 꼬치는 빼고 주문 추천.","도보",34.6656,135.5030),
+
+      it(D.d4,"09:00","카페","숙소 근처 조식 카페","난바, 오사카","체크아웃 전 가볍게 아침 식사.","도보",34.6656,135.5019),
+      it(D.d4,"10:30","쇼핑","마지막 기념품 쇼핑","난바, 오사카","돈키호테·드럭스토어에서 마지막 쇼핑.","도보",34.6656,135.5019),
+      it(D.d4,"11:30","이동","간사이공항으로 이동","간사이국제공항","난바에서 난카이 특급 라피트로 약 40~45분. 여유있게 출발.","기차",34.4320,135.2304)
+    ]
+  };
+}
+function ensureOsakaKyotoTrip(){
+  const existing = DB.trips.find(t=>t.id==="osaka_kyoto_2026_10");
+  if(!existing){
+    const trip = osakaKyotoTrip();
+    DB.trips.push(trip);
+    DB.activeId = trip.id;
+    persist();
+    return;
+  }
+  /* 이미 저장된 사용자 기기에서도, 오버뷰 애니메이션을 멈추게 했던 원인인
+     "이동" 항목과 "숙소" 항목의 좌표가 완전히 같았던 문제를 조용히 고쳐준다. */
+  const move5 = existing.items && existing.items.find(it=>it.day==="2026-10-07" && it.time==="19:30");
+  const stay = existing.items && existing.items.find(it=>it.day==="2026-10-07" && it.time==="20:30");
+  let changed = false;
+  if(move5 && stay && move5.lat===stay.lat && move5.lng===stay.lng){
+    stay.lat = 34.6660; stay.lng = 135.5025;
+    changed = true;
+  }
+  /* 오코노미야끼·타코야키를 잘 먹는다는 요청 반영: 2일차 저녁을 고베규 스테이크에서
+     미즈노 오코노미야끼로 바꾸고, 도톤보리 저녁 산책 전에 와나카 타코야키를 추가한다.
+     한 번만 적용되도록 _menuV2 플래그로 표시해둔다. */
+  if(!existing._menuV2){
+    const oldDinner = existing.items && existing.items.find(it=>it.day==="2026-10-08" && it.time==="19:00");
+    if(oldDinner){
+      oldDinner.name = "미즈노 오코노미야끼 도톤보리 본점";
+      oldDinner.place = "みずの 道頓堀本店, 오사카";
+      oldDinner.memo = "1945년 창업한 오사카 오코노미야끼 원조격 노포. 야마이모(참마) 반죽으로 폭신한 식감, 네이버 블로그 최상위권 단골 맛집. 웨이팅 감안.";
+      oldDinner.lat = 34.6690; oldDinner.lng = 135.5024;
+    }
+    const hasTakoyaki = existing.items && existing.items.some(it=>it.day==="2026-10-08" && it.name==="와나카 타코야키 도구야스지 본점");
+    if(!hasTakoyaki && existing.items){
+      existing.items.push({
+        id: uid(), day:"2026-10-08", time:"20:30", cat:"식당",
+        name:"와나카 타코야키 도구야스지 본점", place:"わなか 道具屋筋本店, 오사카",
+        mapUrl:"", memo:"겉바속촉 타코야키로 관광객·현지인 모두에게 최고 평가받는 곳. 도톤보리에서 도보 5~10분.",
+        move:"도보", alarm:"", lat:34.6647, lng:135.5005, userDocs:[]
+      });
+    }
+    const nightWalk = existing.items && existing.items.find(it=>it.day==="2026-10-08" && it.time==="21:00" && it.name==="도톤보리 야경 산책");
+    if(nightWalk) nightWalk.time = "21:15";
+    existing._menuV2 = true;
+    changed = true;
+  }
+  /* 사용자가 올려준 "제미나이 오사카·교토 맛집·카페 80선" 자료의 더 정확한 좌표/설명으로
+     기존 두 식당 항목을 업데이트한다 (한 번만 적용, _menuV3로 표시). */
+  if(!existing._menuV3){
+    const d1Dinner = existing.items && existing.items.find(it=>it.day==="2026-10-07" && it.time==="18:00");
+    if(d1Dinner && (d1Dinner.name==="규카츠 교토 카츠규 기온점" || d1Dinner.name==="교토 가츠규 본점 (폰토초점)")){
+      d1Dinner.name = "교토 가츠규 본점 (폰토초점)";
+      d1Dinner.place = "Kyoto Katsugyu Pontocho, 폰토초, 교토";
+      d1Dinner.memo = "소고기 살치살을 개인 화로에 취향껏 익혀 먹는 원조 규카츠 정식. 완전히 익혀 먹어 부담 없고, 폰토초 골목 분위기까지 함께 즐기기 좋음.";
+      d1Dinner.lat = 35.0055; d1Dinner.lng = 135.7710;
+    }
+    const d2Dinner = existing.items && existing.items.find(it=>it.day==="2026-10-08" && it.time==="19:00");
+    if(d2Dinner && d2Dinner.name.indexOf("미즈노")>=0){
+      d2Dinner.name = "오코노미야키 미즈노";
+      d2Dinner.place = "Mizuno Okonomiyaki Osaka, 도톤보리, 오사카";
+      d2Dinner.memo = "밀가루 대신 마(참마)를 듬뿍 넣어 입안에서 부드럽게 녹는 산마야키 명가. 1945년 창업한 오사카 오코노미야끼 원조격 노포로 네이버 블로그 최상위권 단골 맛집. 웨이팅 감안.";
+      d2Dinner.lat = 34.6685; d2Dinner.lng = 135.5030;
+    }
+    existing._menuV3 = true;
+    changed = true;
+  }
+  if(changed) persist();
+}
+ensureOsakaKyotoTrip();
 
 function curTrip(){
   let t = DB.trips.find(x=>x.id===DB.activeId);
@@ -870,23 +1018,32 @@ function buildChips(container, options, onPick, getActive){
     container.appendChild(c);
   });
 }
-function openItemSheet(id){
+let prefillCoord = null;
+let prefillPlace = null;
+function openItemSheet(id, prefill){
   editingItemId = id || null;
   pendingFiles = [];
+  prefillCoord = null;
+  prefillPlace = null;
   const t = curTrip();
   let it = id ? t.items.find(i=>i.id===id) : null;
-  let curCat = it ? it.cat : "명소";
+  let curCat = it ? it.cat : (prefill ? (prefill.cat||"식당") : "명소");
   let curMove = it ? it.move : "도보";
 
-  document.getElementById("itemEditTitle").textContent = it ? "일정 편집" : "일정 추가";
+  document.getElementById("itemEditTitle").textContent = it ? "일정 편집" : (prefill ? "맛집 일정에 추가" : "일정 추가");
   document.getElementById("if_day").value = it ? it.day : (selectedDay || todayStr());
-  document.getElementById("if_time").value = it ? it.time : "09:00";
-  document.getElementById("if_name").value = it ? it.name : "";
-  document.getElementById("if_place").value = it ? it.place : "";
+  document.getElementById("if_time").value = it ? it.time : (prefill ? "12:00" : "09:00");
+  document.getElementById("if_name").value = it ? it.name : (prefill ? prefill.name : "");
+  document.getElementById("if_place").value = it ? it.place : (prefill ? prefill.place : "");
   document.getElementById("if_mapUrl").value = it ? it.mapUrl : "";
   document.getElementById("if_alarm").value = it ? (it.alarm||"") : "";
-  document.getElementById("if_memo").value = it ? it.memo : "";
+  document.getElementById("if_memo").value = it ? it.memo : (prefill ? (prefill.memo||"") : "");
   document.getElementById("if_delete").style.display = it ? "block" : "none";
+
+  if(!it && prefill && prefill.lat!=null && prefill.lng!=null){
+    prefillCoord = {lat:prefill.lat, lng:prefill.lng};
+    prefillPlace = prefill.place;
+  }
 
   buildChips(document.getElementById("if_catChips"), Object.keys(CATS), (v)=>curCat=v, ()=>curCat);
   buildChips(document.getElementById("if_moveChips"), MOVES, (v)=>curMove=v, ()=>curMove);
@@ -920,8 +1077,11 @@ function openItemSheet(id){
       scheduleAlarmCheck();
     };
 
-    const needsGeo = place && (!it || it.lat==null || it.place !== place);
-    if(needsGeo){
+    const usePrefill = !it && prefillCoord && place === prefillPlace;
+    const needsGeo = !usePrefill && place && (!it || it.lat==null || it.place !== place);
+    if(usePrefill){
+      finish(prefillCoord.lat, prefillCoord.lng);
+    } else if(needsGeo){
       geocode(place).then(res=>{ finish(res?res.lat:null, res?res.lng:null); }).catch(()=>finish(null,null));
     } else {
       finish(it?it.lat:null, it?it.lng:null);
@@ -1033,6 +1193,203 @@ async function geocode(query){
   return null;
 }
 
+/* ============ Airport code -> city (local lookup, no API key) ============ */
+const AIRPORT_CITY = {
+  ICN:"서울", GMP:"서울", PUS:"부산", CJU:"제주", TAE:"대구", CJJ:"청주", KWJ:"광주", USN:"울산", YNY:"양양",
+  NRT:"도쿄", HND:"도쿄", KIX:"오사카", ITM:"오사카", NGO:"나고야", FUK:"후쿠오카", CTS:"삿포로", OKA:"오키나와",
+  KOJ:"가고시마", HIJ:"히로시마", TAK:"다카마쓰", KMJ:"구마모토", SDJ:"센다이",
+  TPE:"타이베이", TSA:"타이베이", KHH:"가오슝", RMQ:"타이중",
+  HKG:"홍콩", MFM:"마카오",
+  PVG:"상하이", SHA:"상하이", PEK:"베이징", PKX:"베이징", CAN:"광저우", SZX:"선전", CTU:"청두", XIY:"시안",
+  HGH:"항저우", NKG:"난징", TSN:"톈진", CKG:"충칭", DLC:"다롄", SYX:"싼야",
+  BKK:"방콕", DMK:"방콕", HKT:"푸켓", CNX:"치앙마이", UTP:"파타야",
+  SIN:"싱가포르", KUL:"쿠알라룸푸르", PEN:"페낭", LGK:"랑카위",
+  CGK:"자카르타", DPS:"발리(덴파사르)", SUB:"수라바야",
+  MNL:"마닐라", CEB:"세부", KLO:"보라카이(칼리보)", DVO:"다바오",
+  HAN:"하노이", SGN:"호치민", DAD:"다낭", NHA:"나트랑", PQC:"푸꾸옥",
+  RGN:"양곤", PNH:"프놈펜", REP:"시엠립", VTE:"비엔티안",
+  DEL:"델리", BOM:"뭄바이", BLR:"방갈로르", MAA:"첸나이", CCU:"콜카타",
+  DXB:"두바이", AUH:"아부다비", DOH:"도하", IST:"이스탄불", SAW:"이스탄불", TLV:"텔아비브", AMM:"암만",
+  LHR:"런던", LGW:"런던", CDG:"파리", ORY:"파리", FRA:"프랑크푸르트", MUC:"뮌헨", AMS:"암스테르담",
+  FCO:"로마", MXP:"밀라노", VCE:"베니스", BCN:"바르셀로나", MAD:"마드리드", ZRH:"취리히", GVA:"제네바",
+  VIE:"비엔나", PRG:"프라하", ATH:"아테네", LIS:"리스본", OPO:"포르투", BRU:"브뤼셀", CPH:"코펜하겐",
+  ARN:"스톡홀름", OSL:"오슬로", HEL:"헬싱키", DUB:"더블린", WAW:"바르샤바", BUD:"부다페스트",
+  JFK:"뉴욕", EWR:"뉴욕", LGA:"뉴욕", LAX:"로스앤젤레스", SFO:"샌프란시스코", ORD:"시카고",
+  SEA:"시애틀", LAS:"라스베이거스", HNL:"호놀룰루", YVR:"밴쿠버", YYZ:"토론토", BOS:"보스턴",
+  IAD:"워싱턴", MIA:"마이애미", ATL:"애틀랜타", DFW:"댈러스",
+  SYD:"시드니", MEL:"멜버른", BNE:"브리즈번", AKL:"오클랜드", CHC:"크라이스트처치",
+  GUM:"괌", SPN:"사이판", NAN:"난디(피지)"
+};
+function fillCityFromCode(codeInputId, cityInputId){
+  const codeEl = document.getElementById(codeInputId);
+  const cityEl = document.getElementById(cityInputId);
+  const code = codeEl.value.trim().toUpperCase();
+  const city = AIRPORT_CITY[code];
+  if(city && !cityEl.value.trim()){ cityEl.value = city; }
+}
+
+/* ============ 맛집 방문후보지 (제미나이 80선 + 기존 조사분) ============ */
+const FOOD_CANDIDATES = [
+  { city:"오사카", type:"식당", name:"마츠자카규 야끼니꾸 M 호젠지요코초점", query:"Matsusakagyu Yakiniku M Hozenji Yokocho", area:"난바·도톤보리", lat:34.6687, lng:135.5022, desc:"일본 최고급 마츠사카규 화로구이. 정갈한 개별실 중심 구조.", menu:"마츠사카규 세트, 갈비/등심 구이" },
+  { city:"오사카", type:"식당", name:"Yakiniku Kurumi Shinsaibashi", query:"Yakiniku Kurumi Shinsaibashi", area:"신사이바시", lat:34.6738, lng:135.5009, desc:"두툼한 우설 구이와 특선 갈비살이 유명한 인기 야키니쿠.", menu:"특선 우설, 와규 갈비" },
+  { city:"오사카", type:"식당", name:"야키니쿠 로쿠노미야 신사이바시스지점", query:"Yakiniku Rokunomiya Shinsaibashisuji", area:"신사이바시", lat:34.6715, lng:135.5015, desc:"질 좋은 흑모와규를 합리적인 단품 세트로 구성한 가성비 맛집.", menu:"흑모와규 세트, 안창살" },
+  { city:"오사카", type:"식당", name:"Rikimaru Shinsaibashi", query:"Yakiniku Rikimaru Shinsaibashi", area:"신사이바시", lat:34.6720, lng:135.5008, desc:"소고기 특수부위와 갈비를 편하게 구워 먹는 캐주얼 야키니쿠.", menu:"소고기 모둠 구이, 갈비" },
+  { city:"오사카", type:"식당", name:"야키니쿠엔 닌구루 신사이바시점", query:"Yakinikuen Ninguru Shinsaibashi", area:"신사이바시", lat:34.6745, lng:135.4995, desc:"파를 듬뿍 감싼 파우설(네기탄) 구이로 SNS에서 유명한 곳.", menu:"네기탄(파우설), 특선 로스" },
+  { city:"오사카", type:"식당", name:"모토무라 규카츠 난바점", query:"Gyukatsu Motomura Namba", area:"난바", lat:34.6645, lng:135.5012, desc:"겉바속촉 소고기를 개인 화로에 직접 취향껏 완전히 익혀 먹는 규카츠.", menu:"규카츠 정식, 토로로 세트" },
+  { city:"오사카", type:"식당", name:"규슈라멘 키오 센니치마에점", query:"Kyushu Ramen Kio Sennichimae", area:"난바", lat:34.6672, lng:135.5034, desc:"깊고 진한 돈골 육수에 불향 가득한 차슈 토핑 라멘.", menu:"토로차슈 라멘, 토마토 라멘" },
+  { city:"오사카", type:"식당", name:"Udon Tamatama", query:"Udon Tamatama Japanese noodle Osaka", area:"신사이바시", lat:34.6730, lng:135.5028, desc:"탄력 넘치는 수제 면발과 깊은 감칠맛의 가쓰오 육수.", menu:"붓카케 우동, 새우튀김 우동" },
+  { city:"오사카", type:"식당", name:"우동 Mare", query:"Udon Mare Osaka Dotonbori", area:"도톤보리", lat:34.6692, lng:135.5038, desc:"따뜻한 국물 우동부터 바삭한 튀김을 얹은 붓카케 우동까지 정갈함.", menu:"가케우동, 모둠 튀김우동" },
+  { city:"오사카", type:"식당", name:"멘야 하야부사 난바점", query:"Menya Hayabusa Namba", area:"난바", lat:34.6650, lng:135.5020, desc:"거품을 낸 진하고 크리미한 닭백탕(토리파이탄) 라멘 전문점.", menu:"오마르 새우 라멘, 토리파이탄" },
+  { city:"오사카", type:"식당", name:"추카소바 우에마치", query:"Chukasoba Uemachi Osaka", area:"다니마치롯초메", lat:34.6780, lng:135.5200, desc:"미쉐린 빕구르망 등재. 맑고 깊은 닭·멸치 육수의 정통 소유 라멘.", menu:"추카소바(간장), 시오라멘" },
+  { city:"오사카", type:"식당", name:"하가쿠레 기타신치점", query:"Umeda Hagakure Kitashinchi", area:"우메다", lat:34.6980, lng:135.4980, desc:"두 가닥씩 쯔유와 비벼 먹는 특유의 붓카케 우동과 반숙란 튀김.", menu:"생유 우동, 텐푸라 우동" },
+  { city:"오사카", type:"식당", name:"에페(ÉPÉE)", query:"Tonkatsu Epee Osaka", area:"기타신치", lat:34.6970, lng:135.4990, desc:"차분한 다이닝에서 즐기는 육즙 가득 프리미엄 흑돼지 카츠 코스.", menu:"특선 히레카츠, 샤토브리앙 카츠" },
+  { city:"오사카", type:"식당", name:"만제(Manger)", query:"Tonkatsu Manger Yao Osaka", area:"야오", lat:34.6280, lng:135.6020, desc:"일본 최상위권 돈카츠 명가. 도쿄X 흑돼지와 숯불 훈연 돈카츠.", menu:"도쿄X 로스카츠, 특상 히레카츠" },
+  { city:"오사카", type:"식당", name:"카츠동 치요마츠 도톤보리본점", query:"Katsudon Chiyomatsu Dotonbori", area:"도톤보리", lat:34.6680, lng:135.5050, desc:"5cm 두께의 초대형 돼지고기를 24시간 수비드 조리한 압도적 가츠동.", menu:"5cm 특상 카츠동" },
+  { city:"오사카", type:"식당", name:"텐동 마키노 난바 센니치마에점", query:"Tendon Makino Namba Sennichimae", area:"난바", lat:34.6668, lng:135.5031, desc:"주문 즉시 눈앞에서 튀겨내는 큼직한 붕장어와 새우 텐동.", menu:"마키노 스페셜 텐동" },
+  { city:"오사카", type:"식당", name:"키타무라", query:"Kitamura Sukiyaki Osaka", area:"신사이바시", lat:34.6740, lng:135.5010, desc:"1881년 개업한 스키야키 노포. 소고기를 달콤 짭짤하게 직접 조리.", menu:"전통 관서식 스키야키 코스" },
+  { city:"오사카", type:"식당", name:"아지노야 본점", query:"Ajinoya Honten Osaka", area:"난바", lat:34.6682, lng:135.5005, desc:"푹신한 양배추 반죽과 특제 소스가 일품인 미쉐린 가이드 맛집.", menu:"믹스 오코노미야키, 야키소바" },
+  { city:"오사카", type:"식당", name:"오코노미야키 미즈노", query:"Mizuno Okonomiyaki Osaka", area:"도톤보리", lat:34.6685, lng:135.5030, desc:"밀가루 대신 마를 듬뿍 넣어 입안에서 부드럽게 녹는 산마야키 명가.", menu:"산마야키, 미즈노야키" },
+  { city:"오사카", type:"식당", name:"키지 본점 (우메다 스카이빌딩)", query:"Kiji Umeda Sky Building Osaka", area:"우메다", lat:34.7055, lng:135.4895, desc:"고소한 면이 가득 들어간 모던야키와 활기찬 현지 분위기.", menu:"모던야키, 스지야키" },
+  { city:"오사카", type:"카페", name:"릴로 커피 로스터즈", query:"LiLo Coffee Roasters Osaka", area:"신사이바시", lat:34.6718, lng:135.4985, desc:"풍부한 싱글오리진 원두와 바리스타의 정성 어린 한국어 원두 카드.", menu:"핸드드립 스페셜티, 콜드브루" },
+  { city:"오사카", type:"카페", name:"릴로 커피 킷사", query:"LiLo Coffee Kissa Osaka", area:"신사이바시", lat:34.6732, lng:135.5002, desc:"레트로한 다방 분위기에서 즐기는 정갈한 드립 커피와 수제 푸딩.", menu:"융드립 커피, 킷사텐 푸딩" },
+  { city:"오사카", type:"카페", name:"글리치 커피 오사카", query:"GLITCH COFFEE OSAKA", area:"나카노시마", lat:34.6930, lng:135.4960, desc:"과일 향이 폭발하는 독창적 가공 방식의 라이트 로스팅 스페셜티.", menu:"싱글오리진 푸어오버" },
+  { city:"오사카", type:"카페", name:"타카무라 커피 로스터스", query:"Takamura Wine and Coffee Roasters Osaka", area:"히고바시", lat:34.6890, lng:135.4920, desc:"대형 와인·커피 복합 창고형 매장에서 즐기는 정교한 스마트 로스팅 커피.", menu:"스페셜티 드립, 카페라떼" },
+  { city:"오사카", type:"카페", name:"모토 커피", query:"MOTO COFFEE Kitahama Osaka", area:"기타하마", lat:34.6912, lng:135.5065, desc:"나카노시마 강변 테라스 뷰와 함께 즐기는 드립 커피와 티라미수.", menu:"드립 커피, 티라미수, 푸딩" },
+  { city:"오사카", type:"카페", name:"브루클린 로스팅 컴퍼니 기타하마", query:"Brooklyn Roasting Company Kitahama", area:"기타하마", lat:34.6915, lng:135.5075, desc:"탁 트인 리버뷰 테라스에서 진한 라떼와 큼직한 베이커리를 즐김.", menu:"카페라떼, 초코쿠키" },
+  { city:"오사카", type:"카페", name:"스쿨버스 커피 스톱 기타하마", query:"SCHOOL BUS COFFEE STOP KITAHAMA", area:"기타하마", lat:34.6895, lng:135.5080, desc:"미국 빈티지 스쿨버스 감성의 인테리어와 부드러운 플랫화이트.", menu:"플랫화이트, 프렌치토스트" },
+  { city:"오사카", type:"카페", name:"멜 커피 로스터스", query:"Mel Coffee Roasters Osaka", area:"신사이바시", lat:34.6765, lng:135.4965, desc:"아시아 베스트 카페로 선정된 미니멀 스탠드형 라이트 로스팅 명소.", menu:"필터 커피, 플랫화이트" },
+  { city:"오사카", type:"카페", name:"커피 로스팅 팩토리 기타하마", query:"Kitahama Roasting Factory Osaka", area:"기타하마", lat:34.6908, lng:135.5050, desc:"강변 뷰와 함께 다양한 원두를 직접 고르고 시향할 수 있는 로스터리.", menu:"핸드드립 싱글, 카푸치노" },
+  { city:"오사카", type:"카페", name:"와드 오모테나시 카페", query:"wad omotenashi cafe Osaka", area:"신사이바시", lat:34.6778, lng:135.5005, desc:"정갈한 도자기 갤러리 분위기 속에서 즐기는 말차와 구운 떡(야키모찌).", menu:"우지 말차, 야키모찌, 말차빙수" },
+  { city:"오사카", type:"카페", name:"우지엔 신사이바시 본점", query:"Ujien Shinsaibashi Honten", area:"신사이바시", lat:34.6725, lng:135.5018, desc:"150년 전통 차 전문점으로 깊고 진한 말차 파르페와 소프트아이스크림.", menu:"말차 파르페, 호지차 아이스크림" },
+  { city:"오사카", type:"카페", name:"사샤 가네쇼", query:"Chasha Kanesho Osaka", area:"난바", lat:34.6655, lng:135.5010, desc:"우지 말차를 사용한 섬세한 몽블랑과 정갈한 일식 디저트.", menu:"말차 몽블랑, 교토 말차 세트" },
+  { city:"오사카", type:"카페", name:"시아와세노 팬케이크 신사이바시점", query:"A Happy Pancake Shinsaibashi", area:"신사이바시", lat:34.6710, lng:135.5000, desc:"주문 즉시 구워내 입안에서 녹아내리는 부드러운 수플레 팬케이크.", menu:"행복의 수플레 팬케이크" },
+  { city:"오사카", type:"카페", name:"에그앤띵스 신사이바시점", query:"Eggs n Things Shinsaibashi", area:"신사이바시", lat:34.6730, lng:135.4988, desc:"산더미처럼 쌓아 올린 가벼운 휘핑크림과 팬케이크의 하와이안 무드.", menu:"스트로베리 휩 팬케이크" },
+  { city:"오사카", type:"카페", name:"사오리 오사카점", query:"Saori Mont Blanc Osaka", area:"우메다", lat:34.7030, lng:135.4975, desc:"1mm 실타래 최고급 밤 앙금 몽블랑을 즉석에서 직접 뽑아주는 곳.", menu:"사오리 밤 몽블랑" },
+  { city:"오사카", type:"카페", name:"파르페 테리아 파르", query:"Parfaiteria PaL Osaka", area:"신사이바시", lat:34.6720, lng:135.5020, desc:"하루를 달콤하게 마감하는 야간 예술 파르페 전문 바.", menu:"시즌 시메파르페" },
+  { city:"오사카", type:"카페", name:"킷사 아메리카", query:"Jun Kissa American Dotonbori Osaka", area:"난바(도톤보리)", lat:34.6688, lng:135.5028, desc:"1946년 문을 연 유서 깊은 레트로 다방. 클래식 핫케이크 명소.", menu:"핫케이크, 커스터드 푸딩" },
+  { city:"오사카", type:"카페", name:"카페 유", query:"Cafe Yu Umeda Osaka", area:"우메다", lat:34.7040, lng:135.4980, desc:"자신이 원하는 수제 도자기 컵을 골라 음료를 마시는 공방형 카페.", menu:"수제 그릇 커피, 파르페" },
+  { city:"오사카", type:"카페", name:"프루츠 파를러 센비키야 한큐우메다", query:"Sembikiya Hankyu Umeda Osaka", area:"우메다", lat:34.7025, lng:135.4985, desc:"최고급 제철 과일을 듬뿍 넣은 정통 후르츠 산도와 파르페 살롱.", menu:"후르츠 산도, 과일 파르페" },
+  { city:"오사카", type:"카페", name:"비오톱 코너 스탠드", query:"BIOTOP CORNER STAND Osaka", area:"오렌지스트리트", lat:34.6698, lng:135.4940, desc:"루프탑 가든의 식물원 무드 속에서 즐기는 피자와 스페셜티 커피.", menu:"에스프레소, 하우스 블렌드" },
+  { city:"교토", type:"식당", name:"가츠쿠라 산조 본점", query:"Katsukura Sanjo Kyoto", area:"가와라마치", lat:35.0088, lng:135.7675, desc:"참깨를 직접 갈아 소스와 곁들이는 교토 대표 명가 카츠.", menu:"히레카츠, 유바 고로케" },
+  { city:"교토", type:"식당", name:"교토 가츠규 본점 (폰토초점)", query:"Kyoto Katsugyu Pontocho", area:"폰토초", lat:35.0055, lng:135.7710, desc:"소고기 살치살을 개인 화로에 취향껏 익혀 먹는 원조 규카츠 정식.", menu:"살치살 규카츠 정식" },
+  { city:"교토", type:"식당", name:"돈카츠 다이키", query:"Tonkatsu Daiki Kyoto", area:"교토역 인근", lat:34.9880, lng:135.7550, desc:"두툼한 프리미엄 흑돼지 육즙이 돋보이는 현지인·여행객 인기 돈카츠.", menu:"두툼 로스카츠 정식" },
+  { city:"교토", type:"식당", name:"가츠규 가와라마치점", query:"Gyukatsu Kyoto Katsugyu Kawaramachi", area:"가와라마치", lat:35.0040, lng:135.7690, desc:"다양한 소스(카레, 와사비, 특제 간장)와 곁들이는 부드러운 규카츠.", menu:"규카츠 교토 다시 간장 세트" },
+  { city:"교토", type:"식당", name:"오멘 긴카쿠지 본점", query:"Omen Ginkakuji Main Branch Kyoto", area:"은각사 인근", lat:35.0265, lng:135.7940, desc:"정갈한 제철 채소 고명과 참깨를 진한 쯔유에 적셔 먹는 수제 츠케우동.", menu:"오멘 츠케우동 세트" },
+  { city:"교토", type:"식당", name:"야마모토 멘조", query:"Yamamoto Menzo Kyoto", area:"오카자키(헤이안신궁)", lat:35.0145, lng:135.7845, desc:"교토 최고 명성의 탄력 넘치는 면발과 바삭한 우엉 튀김.", menu:"우엉튀김 붓카케 우동" },
+  { city:"교토", type:"식당", name:"히노데 우동", query:"Hinode Udon Kyoto", area:"난젠지·철학의길", lat:35.0150, lng:135.7950, desc:"진하고 걸쭉한 특제 카레 육수에 소고기를 듬뿍 넣은 카레 우동.", menu:"특선 소고기 카레 우동" },
+  { city:"교토", type:"식당", name:"니신소바 마츠바 본점", query:"Matsuba Nishin Soba Kyoto", area:"기온시조", lat:35.0038, lng:135.7725, desc:"1861년 창업. 달콤 짭조름하게 조린 청어를 올린 원조 니신소바.", menu:"원조 니신소바(청어 메밀국수)" },
+  { city:"교토", type:"식당", name:"교토 기온 우", query:"Gion U Unagi Kyoto", area:"기온", lat:35.0018, lng:135.7750, desc:"미쉐린 스타 장어덮밥 명가. 숯불에 완벽히 구워낸 장어의 풍미.", menu:"우나쥬(장어덮밥), 우나기 구이" },
+  { city:"교토", type:"식당", name:"우나기 히로카와", query:"Unagi Hirokawa Arashiyama Kyoto", area:"아라시야마", lat:35.0140, lng:135.6775, desc:"정갈한 정원을 보며 즐기는 최상급 장어덮밥(예약 필수 코스).", menu:"특선 장어덮밥 정식" },
+  { city:"교토", type:"식당", name:"도후후지노 텐도 (교토역 이세탄)", query:"Kyoto Tofuro Fujino Kyoto Station Isetan", area:"교토역", lat:34.9855, lng:135.7585, desc:"신선한 수제 두부와 쫄깃한 유바를 다채롭게 맛보는 깔끔한 정식.", menu:"후지노 두부 가이세키 정식" },
+  { city:"교토", type:"식당", name:"토쇼안", query:"Toshoan Kyoto", area:"가라스마", lat:35.0060, lng:135.7590, desc:"담백한 콩/두부 요리와 갓 튀긴 두유 도넛이 유명한 로컬 맛집.", menu:"두유 파스타, 두유 도넛 세트" },
+  { city:"교토", type:"식당", name:"기온 탄토", query:"Gion Tanto Kyoto", area:"기온(타츠미바시)", lat:35.0050, lng:135.7740, desc:"시냇물 흐르는 창가에서 즐기는 푹신한 오코노미야키와 야키소바.", menu:"스지 오코노미야키, 야키소바" },
+  { city:"교토", type:"식당", name:"차오차오 교자", query:"Chao Chao Gyoza Shijo Kawaramachi Kyoto", area:"가와라마치", lat:35.0050, lng:135.7705, desc:"바삭하게 날개를 달아 구워낸 한입 크기 수제 만두와 생맥주.", menu:"차오차오 날개 교자" },
+  { city:"교토", type:"식당", name:"미시마테이 본점", query:"Mishima-tei Main Shop Kyoto", area:"산조 테라마치", lat:35.0080, lng:135.7670, desc:"1873년 창업 최고급 스키야키 노포. 직원이 직접 조리해 주는 와규.", menu:"특선 소고기 스키야키 코스" },
+  { city:"교토", type:"식당", name:"야키니쿠 히로 기온점", query:"Yakiniku Hiro Gion Kyoto", area:"기온", lat:35.0042, lng:135.7735, desc:"유명 정육점 직영으로 최상급 흑모와규를 합리적인 가격에 제공.", menu:"히로 특선 와규 모둠" },
+  { city:"교토", type:"식당", name:"야키니쿠 류엔 교토역점", query:"Yakiniku Ryuen Kyoto Station", area:"교토역", lat:34.9865, lng:135.7595, desc:"모던하고 프라이빗한 공간에서 즐기는 특제 양념 소고기 화로구이.", menu:"와규 갈비, 로스 화로구이" },
+  { city:"교토", type:"식당", name:"스키야키 기무라", query:"Sukiyaki Kimura Kyoto", area:"테라마치", lat:35.0045, lng:135.7668, desc:"오랜 세월의 정취가 살아있는 가성비 만점의 레트로 스키야키.", menu:"소고기 스키야키 나베" },
+  { city:"교토", type:"식당", name:"혼케 다이이치아사히 본점", query:"Honke DaiichiAsahi Kyoto Station", area:"교토역 인근", lat:34.9868, lng:135.7605, desc:"맑고 진한 간장 돼지육수에 파와 차슈를 산더미처럼 얹은 아침 라멘.", menu:"특제 차슈 라멘, 만두" },
+  { city:"교토", type:"식당", name:"동양정 본점", query:"Toyotei Main Shop Kitayama Kyoto", area:"기타야마", lat:35.0505, lng:135.7650, desc:"1897년 개업. 호일에 감싸 구워낸 함박스테이크와 토마토 샐러드.", menu:"백년양식 함박스테이크 세트" },
+  { city:"교토", type:"카페", name:"쿠라스 교토 스탠드", query:"Kurasu Kyoto Stand", area:"교토역", lat:34.9860, lng:135.7570, desc:"미니멀 공간에서 맛보는 정교한 드립 커피와 말차 에스프레소 라떼.", menu:"핸드드립 싱글, 말차라떼" },
+  { city:"교토", type:"카페", name:"% Arabica 아라시야마", query:"% Arabica Kyoto Arashiyama", area:"아라시야마", lat:35.0132, lng:135.6765, desc:"도게츠교와 강변을 조망하며 즐기는 고소하고 진한 카페라떼 명소.", menu:"교토 라떼, 바게트 샌드위치" },
+  { city:"교토", type:"카페", name:"위켄더스 커피 토미코지", query:"Weekenders Coffee Tomikoji Kyoto", area:"가와라마치", lat:35.0075, lng:135.7650, desc:"골목 안 작은 전통 가옥 주차장에 숨겨진 감성 로스터리 드립 바.", menu:"싱글오리진 푸어오버" },
+  { city:"교토", type:"카페", name:"블루보틀 커피 난젠지", query:"Blue Bottle Coffee Kyoto Cafe Nanzenji", area:"난젠지", lat:35.0125, lng:135.7920, desc:"100년 된 마치야 전통 가옥과 고즈넉한 정원 뷰가 어우러진 공간.", menu:"드립 커피, 놀라 플로트" },
+  { city:"교토", type:"카페", name:"스타벅스 니넨자카 야사카차야점", query:"Starbucks Coffee Kyoto Ninenzaka Yasaka Chaya", area:"니넨자카", lat:35.0005, lng:135.7808, desc:"전통 다다미 방에 앉아 정원을 바라보며 커피를 마실 수 있는 매장.", menu:"콜드브루, 말차 프라푸치노" },
+  { city:"교토", type:"카페", name:"왈든 우즈 교토", query:"Walden Woods Kyoto", area:"고조", lat:34.9940, lng:135.7620, desc:"올 화이트 미니멀 인테리어와 계단식 좌석이 돋보이는 힐링 카페.", menu:"플랫화이트, 카눌레" },
+  { city:"교토", type:"카페", name:"스쿨버스 커피 스톱 교토", query:"SCHOOL BUS COFFEE STOP KYOTO", area:"진구마루타마치", lat:35.0180, lng:135.7710, desc:"빈티지 아메리칸 무드에서 즐기는 부드러운 라떼와 토스트.", menu:"플랫화이트, 토스트 디저트" },
+  { city:"교토", type:"카페", name:"더 서커스 교토", query:"The Circus Kyoto", area:"고조", lat:34.9960, lng:135.7600, desc:"유럽풍 빈티지 감성과 정갈한 플레이팅의 수제 치즈케이크 명소.", menu:"치즈케이크 플래터, 드립커피" },
+  { city:"교토", type:"카페", name:"나카무라 토키치 본점", query:"Nakamura Tokichi Honten Uji Kyoto", area:"우지", lat:34.8900, lng:135.8030, desc:"1854년 개업. 대나무 통에 담긴 말차 젤리와 진한 말차 파르페.", menu:"생차 젤리 파르페, 우지 말차" },
+  { city:"교토", type:"카페", name:"츠지리헤이 본점", query:"Tsujirihei Honten Uji Kyoto", area:"우지", lat:34.8935, lng:135.8000, desc:"고즈넉한 정원을 감상하며 극상의 쌉싸름함을 즐기는 말차 몽블랑.", menu:"말차 몽블랑, 농차 아이스크림" },
+  { city:"교토", type:"카페", name:"사료 츠지리 기온 본점", query:"Saryo Tsujiri Gion Main Store Kyoto", area:"기온", lat:35.0035, lng:135.7755, desc:"교토 말차 파르페의 기준. 층마다 재료가 풍성한 프리미엄 파르페.", menu:"특선 츠지리 말차 파르페" },
+  { city:"교토", type:"카페", name:"잇포도 티룸", query:"Ippodo Tea Kyoto Main Store", area:"교토시청 인근", lat:35.0130, lng:135.7680, desc:"300년 전통 차 명가. 직접 차를 우려 마시는 정갈한 다도 체험.", menu:"말차 세트, 옥로차(교쿠로)" },
+  { city:"교토", type:"카페", name:"사료 호센", query:"Saryo Hosen Kyoto", area:"시모가모", lat:35.0420, lng:135.7740, desc:"일본 정원을 조망하며 주문 즉시 만드는 투명한 와라비모찌 즐기기.", menu:"수제 와라비모찌, 말차" },
+  { city:"교토", type:"카페", name:"기온 토쿠야", query:"Gion Tokuya Kyoto", area:"기온(하나미코지)", lat:35.0030, lng:135.7745, desc:"놋그릇 얼음 위에 얹은 차가운 와라비모찌와 구워 먹는 찰떡.", menu:"토쿠야 와라비모찌, 구운 모찌" },
+  { city:"교토", type:"카페", name:"사오리 본점", query:"Waguri Saori Kyoto", area:"기온·가와라마치", lat:35.0015, lng:135.7700, desc:"1mm 두께로 가늘게 뽑아내는 최고급 밤 앙금 실타래 몽블랑 본점.", menu:"사오리 밤 몽블랑(로)" },
+  { city:"교토", type:"카페", name:"스마트 커피", query:"Smart Coffee Kyoto", area:"테라마치 상점가", lat:35.0090, lng:135.7672, desc:"1932년 창업 킷사텐. 도톰한 프렌치토스트와 핫케이크, 진한 커피.", menu:"프렌치토스트, 자체 로스팅 커피" },
+  { city:"교토", type:"카페", name:"프랑소아 찻집", query:"Salon de the Francois Kyoto", area:"가와라마치", lat:35.0032, lng:135.7702, desc:"국가 등록유형문화재 지정 바로크풍 살롱에서 즐기는 비엔나커피.", menu:"비엔나커피, 레어 치즈케이크" },
+  { city:"교토", type:"카페", name:"킷사 소와레", query:"Kissa Soiree Kyoto", area:"폰토초 인근", lat:35.0040, lng:135.7708, desc:"신비로운 푸른빛 조명 아래 5색 젤리가 보석처럼 빛나는 젤리 펀치.", menu:"젤리 펀치, 젤리 소다" },
+  { city:"교토", type:"카페", name:"우메조노 카페앤갤러리", query:"Umezono CAFE & GALLERY Kyoto", area:"가라스마", lat:35.0068, lng:135.7575, desc:"네모반듯하게 구워낸 폭신한 말차 팬케이크와 팥앙금의 조화.", menu:"말차 팬케이크, 미타라시 당고" },
+  { city:"교토", type:"카페", name:"마루후쿠 커피점 교토포르타점", query:"Marufuku Coffee Kyoto Porta", area:"교토역", lat:34.9858, lng:135.7590, desc:"1934년 창업 전통의 진한 다크 로스팅 드립 커피와 수제 핫케이크.", menu:"수제 핫케이크 세트, 다크 커피" },
+  { city:"오사카", type:"식당", name:"와나카 타코야키 도구야스지 본점", query:"Wanaka Takoyaki Namba", area:"난바", lat:34.6647, lng:135.5005, desc:"겉바속촉 타코야키로 관광객·현지인 모두에게 최고 평가받는 곳.", menu:"타코야키 8개입" },
+  { city:"오사카", type:"식당", name:"아이즈야(会津屋)", query:"Aizuya Takoyaki Osaka", area:"난바 인근", lat:34.6620, lng:135.4985, desc:"타코야키의 원조로 알려진 곳(1935년경). 소스 없이 간장 베이스.", menu:"원조 타코야키" },
+  { city:"오사카", type:"식당", name:"쿠쿠루 도톤보리점", query:"Dotonbori Kukuru Takoyaki", area:"도톤보리", lat:34.6690, lng:135.5017, desc:"대형 문어 간판으로 유명한 관광 포토스팟. 맛보다 인지도 위주.", menu:"타코야키 세트" },
+  { city:"오사카", type:"식당", name:"야마짱 신사이바시점", query:"Yamachan Takoyaki Shinsaibashi", area:"신사이바시", lat:34.6725, lng:135.5015, desc:"마요네즈 듬뿍 스타일의 로컬 타코야키 체인.", menu:"마요 타코야키" },
+  { city:"오사카", type:"식당", name:"고베규 사무라이 도톤보리점", query:"Kobe Beef Samurai Dotonbori", area:"도톤보리", lat:34.6687, lng:135.5013, desc:"고베규 철판 스테이크 전문점. 관광객 응대가 좋고 한국어 메뉴 제공.", menu:"고베규 철판 스테이크" },
+  { city:"오사카", type:"식당", name:"킨류라멘 도톤보리 본점", query:"Kinryu Ramen Dotonbori", area:"도톤보리", lat:34.6683, lng:135.5008, desc:"24시간 영업, 진한 돈코츠 국물로 네이버 블로그 인지도 매우 높음.", menu:"돈코츠 라멘" }
+];
+
+let fpCity = "ALL";
+let fpType = "ALL";
+let fpQuery = "";
+function buildFilterChips(container, options, getActive, onPick){
+  container.innerHTML = "";
+  options.forEach(opt=>{
+    const c = document.createElement("div");
+    c.className = "chip" + (getActive()===opt.value ? " sel" : "");
+    c.textContent = opt.label;
+    c.addEventListener("click", ()=>{ onPick(opt.value); renderFoodList(); buildFilterChips(container, options, getActive, onPick); });
+    container.appendChild(c);
+  });
+}
+function renderFoodList(){
+  const list = document.getElementById("fp_list");
+  const q = fpQuery.toLowerCase().trim();
+  const filtered = FOOD_CANDIDATES.filter(p=>{
+    const matchCity = fpCity==="ALL" || p.city===fpCity;
+    const matchType = fpType==="ALL" || p.type===fpType;
+    const matchQuery = !q || p.name.toLowerCase().includes(q) || p.area.toLowerCase().includes(q) ||
+      p.desc.toLowerCase().includes(q) || p.menu.toLowerCase().includes(q);
+    return matchCity && matchType && matchQuery;
+  });
+  document.getElementById("fp_count").textContent = `${filtered.length} / ${FOOD_CANDIDATES.length}곳`;
+  list.innerHTML = "";
+  if(!filtered.length){
+    list.innerHTML = `<div class="foodempty">조건에 맞는 곳이 없어요</div>`;
+    return;
+  }
+  filtered.forEach(p=>{
+    const card = document.createElement("div");
+    card.className = "foodcard";
+    card.innerHTML = `
+      <div class="foodtop">
+        <div class="foodname">${esc(p.name)}</div>
+        <div class="foodbadges">
+          <span class="foodbadge city-${esc(p.city)}">${esc(p.city)}</span>
+          <span class="foodbadge type-${esc(p.type)}">${esc(p.type)}</span>
+        </div>
+      </div>
+      <div class="foodarea">📍 ${esc(p.area)}</div>
+      <div class="fooddesc">${esc(p.desc)}</div>
+      <div class="foodmenu">✨ ${esc(p.menu)}</div>
+      <button class="foodaddbtn">일정에 추가</button>`;
+    card.querySelector(".foodaddbtn").addEventListener("click", ()=>{
+      closeSheet();
+      openItemSheet(null, {
+        name: p.name,
+        place: `${p.query}, ${p.area}, ${p.city}`,
+        cat: p.type==="카페" ? "카페" : "식당",
+        memo: `${p.desc} (추천: ${p.menu})`,
+        lat: p.lat, lng: p.lng
+      });
+    });
+    list.appendChild(card);
+  });
+}
+function openFoodPicker(){
+  fpCity = "ALL"; fpType = "ALL"; fpQuery = "";
+  document.getElementById("fp_search").value = "";
+  buildFilterChips(document.getElementById("fp_cityChips"),
+    [{value:"ALL",label:"전체 도시"},{value:"오사카",label:"오사카"},{value:"교토",label:"교토"}],
+    ()=>fpCity, (v)=>fpCity=v);
+  buildFilterChips(document.getElementById("fp_typeChips"),
+    [{value:"ALL",label:"전체 종류"},{value:"식당",label:"식당"},{value:"카페",label:"카페"}],
+    ()=>fpType, (v)=>fpType=v);
+  renderFoodList();
+  openSheet("sheetFoodPicker");
+}
+document.getElementById("addFoodBtn").addEventListener("click", openFoodPicker);
+document.getElementById("fp_search").addEventListener("input", (e)=>{ fpQuery = e.target.value; renderFoodList(); });
+
 /* ============ Flight Sheet ============ */
 let editingFlightId = null;
 function openFlightSheet(id){
@@ -1075,6 +1432,15 @@ function openFlightSheet(id){
   };
   openSheet("sheetFlight");
 }
+["ff_fromCode","ff_toCode"].forEach(id=>{
+  const el = document.getElementById(id);
+  el.addEventListener("input", ()=>{
+    const pos = el.selectionStart;
+    el.value = el.value.toUpperCase();
+    if(pos!=null) el.setSelectionRange(pos,pos);
+    fillCityFromCode(id, id==="ff_fromCode" ? "ff_fromCity" : "ff_toCity");
+  });
+});
 document.getElementById("addFlightBtn").addEventListener("click", ()=>openFlightSheet(null));
 document.getElementById("addItemBtn").addEventListener("click", ()=>openItemSheet(null));
 
@@ -1441,13 +1807,16 @@ async function fetchRoute(a, b){
     const url = `https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`;
     const res = await fetch(url);
     const data = await res.json();
-    if(data && data.routes && data.routes[0]){
+    if(data && data.routes && data.routes[0] && data.routes[0].geometry &&
+       Array.isArray(data.routes[0].geometry.coordinates) && data.routes[0].geometry.coordinates.length >= 2){
       const coords = data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
       routeCache[key] = coords;
       return coords;
     }
   }catch(e){ console.warn("route fail", e); }
-  const fallback = [[a.lat,a.lng],[b.lat,b.lng]];
+  /* OSRM이 빈 경로/오류를 반환하거나(출발-도착 좌표가 같은 경우 등) 네트워크가 없으면
+     직선 2점으로 안전하게 대체한다. 항상 최소 2개의 좌표를 보장해야 애니메이션이 멈추지 않는다. */
+  const fallback = (a.lat===b.lat && a.lng===b.lng) ? [[a.lat,a.lng],[a.lat,a.lng]] : [[a.lat,a.lng],[b.lat,b.lng]];
   routeCache[key] = fallback;
   return fallback;
 }
@@ -1469,6 +1838,10 @@ function updateOvBottom(){
 function renderOverview(){
   initMap();
   setTimeout(()=>map.invalidateSize(), 60);
+  /* 날짜를 바꿔서 새로 그릴 때는 이전 애니메이션 상태를 강제로 초기화해서,
+     혹시라도 남아있는 잠금 때문에 이전/다음 버튼이 먹통이 되는 일이 없게 한다. */
+  ovAnimating = false;
+  stopWalkFrames();
   const t = curTrip();
   const day = selectedDay || tripDates(t)[0];
   ovItems = dayItems(t, day).filter(it=>it.lat!=null && it.lng!=null);
@@ -1547,41 +1920,74 @@ function distKm(a,b){
 async function animateToIndex(targetIdx){
   if(ovAnimating || targetIdx===ovIndex || targetIdx<0 || targetIdx>=ovItems.length) return;
   ovAnimating = true;
-  const dir = targetIdx > ovIndex ? 1 : -1;
-  let cur = ovIndex;
-  while(cur !== targetIdx){
-    const next = cur + dir;
-    const a = ovItems[cur], b = ovItems[next];
-    const coords = await fetchRoute(a,b);
-    const path = dir>0 ? coords : coords.slice().reverse();
-    const km = distKm(a,b);
-    const dur = Math.max(1600, Math.min(4000, km*250 + 1200));
-    ensureCharMarker();
-    setCharSprite(dir>0? b.move : a.move);
-    await animatePath(path, dur);
+  try{
+    const dir = targetIdx > ovIndex ? 1 : -1;
+    let cur = ovIndex;
+    while(cur !== targetIdx){
+      const next = cur + dir;
+      const a = ovItems[cur], b = ovItems[next];
+      let path;
+      try{
+        const coords = await fetchRoute(a,b);
+        /* fetchRoute(a,b) always returns a route ordered from a -> b (the current
+           position to the target), regardless of whether we're moving forward or
+           backward through the day's items, so no reversal is needed here. */
+        path = (Array.isArray(coords) && coords.length) ? coords : [[a.lat,a.lng],[b.lat,b.lng]];
+      }catch(e){
+        console.warn("fetchRoute fail, using straight line", e);
+        path = [[a.lat,a.lng],[b.lat,b.lng]];
+      }
+      const km = distKm(a,b);
+      const dur = Math.max(1600, Math.min(4000, km*250 + 1200));
+      ensureCharMarker();
+      setCharSprite(b.move);
+      await animatePath(path, dur);
+      stopWalkFrames();
+      cur = next;
+      ovIndex = cur;
+      updateOvBottom();
+      drawStaticRoutes();
+    }
+  }catch(e){
+    console.warn("animateToIndex fail", e);
+  }finally{
+    /* 어떤 예외가 나더라도 반드시 플래그를 풀어줘야 다음 조작(이전/다음/지금, 날짜 전환)이
+       영구히 멈추지 않는다. */
+    ovAnimating = false;
     stopWalkFrames();
-    cur = next;
-    ovIndex = cur;
-    updateOvBottom();
-    drawStaticRoutes();
   }
-  ovAnimating = false;
 }
 function animatePath(path, dur){
   return new Promise(resolve=>{
+    /* 경로가 비어있거나 점이 1개뿐이면(같은 좌표, 손상된 응답 등) 애니메이션 없이
+       바로 끝점으로 이동시키고 종료한다 - 절대 멈춰서(hang) 이후 조작이 막히면 안 된다. */
+    if(!Array.isArray(path) || path.length === 0){ resolve(); return; }
+    if(path.length === 1){
+      if(charMarker) charMarker.setLatLng(path[0]);
+      resolve();
+      return;
+    }
     const start = performance.now();
     const n = path.length;
     function step(now){
-      const t = Math.min(1, (now-start)/dur);
-      const pos = t*(n-1);
-      const i0 = Math.floor(pos), i1 = Math.min(n-1, i0+1);
-      const f = pos - i0;
-      const lat = path[i0][0] + (path[i1][0]-path[i0][0])*f;
-      const lng = path[i0][1] + (path[i1][1]-path[i0][1])*f;
-      if(charMarker) charMarker.setLatLng([lat,lng]);
-      const bounds = map.getBounds();
-      if(!bounds.contains([lat,lng])){ map.panTo([lat,lng], {animate:false}); }
-      if(t<1){ requestAnimationFrame(step); } else { resolve(); }
+      try{
+        const t = Math.min(1, (now-start)/dur);
+        const pos = t*(n-1);
+        const i0 = Math.max(0, Math.min(n-1, Math.floor(pos)));
+        const i1 = Math.min(n-1, i0+1);
+        const f = pos - i0;
+        const lat = path[i0][0] + (path[i1][0]-path[i0][0])*f;
+        const lng = path[i0][1] + (path[i1][1]-path[i0][1])*f;
+        if(charMarker) charMarker.setLatLng([lat,lng]);
+        if(map){
+          const bounds = map.getBounds();
+          if(bounds && !bounds.contains([lat,lng])){ map.panTo([lat,lng], {animate:false}); }
+        }
+        if(t<1){ requestAnimationFrame(step); } else { resolve(); }
+      }catch(e){
+        console.warn("animatePath step fail", e);
+        resolve();
+      }
     }
     requestAnimationFrame(step);
   });
